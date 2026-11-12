@@ -20,6 +20,6 @@ As responsabilidades técnicas (frontend, backend, banco, testes, deploy e docum
 
 - GitHub para código e revisão.
 - Trello para tarefas.
-- Repositórios separados para frontend e backend.
+- GitHub: um repositório monorepo (`apps/api` e `apps/web`).
 
 Quadro Trello informado: https://trello.com/b/kHpHBXhy/mov-aplica%C3%A7%C3%A3o

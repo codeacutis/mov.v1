@@ -2,7 +2,7 @@
 
 Aplicação web para planejamento e acompanhamento do **transporte municipal de pacientes**. A Secretaria Municipal de Saúde organiza viagens de ida e volta, pacientes, motoristas, veículos, rotas, confirmações e ocorrências — sem tratar o sistema como prontuário eletrônico.
 
-Este repositório concentra a documentação de produto, arquitetura e desenvolvimento do projeto acadêmico. Frontend e backend serão mantidos em repositórios separados, conforme a decisão de stack.
+Repositório **monorepo** do projeto acadêmico: documentação em `docs/`, API em `apps/api` (NestJS) e interface em `apps/web` (React). São duas aplicações no mesmo Git, com deploys independentes.
 
 > **Dados reais de saúde não devem ser usados** neste ambiente. Desenvolvimento, testes e demonstrações utilizam apenas dados fictícios. Operação produtiva depende de avaliação formal de privacidade (LGPD), segurança e infraestrutura.
 
@@ -57,7 +57,7 @@ A operação é modelada como **uma viagem municipal de ida e volta**: horário 
 | Confirmação | WhatsApp Business Platform / Cloud API | Encapsulada por provider; webhook idempotente |
 | Hospedagem (proposta acadêmica) | Vercel, Render, Supabase | Apenas MVP/demonstração com dados fictícios |
 
-Gerenciador de pacotes (npm, pnpm ou yarn) ainda será padronizado pela equipe.
+Gerenciador de pacotes proposto: **npm**. Não misturar pnpm ou yarn no mesmo clone.
 
 ## Arquitetura
 
@@ -102,19 +102,19 @@ Detalhes em [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE
 
 ## Execução na máquina local
 
-O código de aplicação ainda não está neste repositório. Quando frontend e backend existirem, cada um terá README, `.env.example`, scripts e pipeline próprios. O fluxo local previsto é o seguinte.
+O scaffold de NestJS e React ainda não foi gerado: `apps/api` e `apps/web` existem como pastas-base. Depois da instalação (ver `apps/README.md`), o fluxo local previsto é o seguinte.
 
 ### Pré-requisitos
 
 - Node.js LTS compatível com a versão do NestJS adotada
-- npm, pnpm ou yarn (um único gerenciador, a padronizar)
+- npm
 - PostgreSQL em execução
 - Git
 - Editor com suporte a TypeScript
 
-### Backend
+### Backend (`apps/api`)
 
-1. Clonar o repositório do backend e instalar as dependências
+1. Instalar as dependências em `apps/api`
 2. Copiar `.env.example` para `.env` e preencher valores locais (sem commitar segredos)
 3. Subir o PostgreSQL
 4. Aplicar as migrations do Prisma
@@ -135,8 +135,8 @@ WHATSAPP_APP_SECRET=
 
 ### Frontend
 
-1. Clonar o repositório do frontend e instalar as dependências
-2. Configurar a URL da API local
+1. Instalar as dependências em `apps/web`
+2. Configurar a URL da API local (`apps/api`)
 3. Iniciar a aplicação em modo desenvolvimento
 
 O frontend consome a API REST e **não duplica** regras críticas de negócio.
@@ -167,7 +167,7 @@ O frontend consome a API REST e **não duplica** regras críticas de negócio.
 
 ## Status do projeto
 
-Fase atual: **fechamento de decisões e base documental**, rumo à base técnica (repositórios, NestJS modular, React, PostgreSQL, autenticação e CI).
+Fase atual: **fechamento de decisões e base de pastas do monorepo**, rumo à base técnica (NestJS em `apps/api`, React em `apps/web`, PostgreSQL, autenticação e CI).
 
 Pendências conhecidas incluem campos obrigatórios do paciente, política de espera no retorno, provedor de mapas/rotas, política de autenticação/retenção e avaliação formal antes de qualquer uso com dados reais. O detalhamento está em [`docs/decisions/DECISIONS.md`](docs/decisions/DECISIONS.md) e [`docs/project/ROADMAP.md`](docs/project/ROADMAP.md).
 

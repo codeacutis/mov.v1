@@ -19,7 +19,7 @@ Separar o que é necessário para uma demonstração acadêmica do que represent
 - [ ] Definir política de retenção e segurança para produção.
 
 ## Fase 1 — Base técnica
-- Repositórios separados e padronizados.
+- Monorepo padronizado (`apps/api` e `apps/web`).
 - NestJS modular, React e PostgreSQL.
 - Prisma e migrations iniciais.
 - Autenticação e autorização.

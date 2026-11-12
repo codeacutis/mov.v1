@@ -10,7 +10,11 @@ Legenda:
 ## D-001 — Stack
 **Status: CONFIRMED**
 
-Backend Node.js + NestJS + TypeScript; Express como adaptador HTTP do NestJS; frontend React + TypeScript; PostgreSQL; Prisma; API REST. Repositórios separados para frontend e backend.
+Backend Node.js + NestJS + TypeScript; Express como adaptador HTTP do NestJS; frontend React + TypeScript; PostgreSQL; Prisma; API REST.
+
+Organização do código: **monorepo** neste repositório. Frontend e backend permanecem aplicações distintas (`apps/web` e `apps/api`), com `package.json` e deploy separados, no mesmo Git. Documentação de produto fica em `docs/`.
+
+**PROPOSED:** gerenciador de pacotes `npm` (já vem com o Node e é o padrão dos CLIs do Nest e do Vite). A equipe pode confirmar depois.
 
 ## D-002 — Papéis
 **Status: CONFIRMED**

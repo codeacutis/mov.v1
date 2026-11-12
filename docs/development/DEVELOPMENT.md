@@ -3,14 +3,22 @@
 ## 1. Pré-requisitos
 
 - Node.js em versão LTS compatível com a versão do NestJS adotada.
-- npm, pnpm ou yarn — **PENDING:** padronizar um único gerenciador e versioná-lo.
+- npm (**PROPOSED** como gerenciador único; pnpm/yarn não misturar no mesmo clone).
 - PostgreSQL.
 - Git.
 - Editor com suporte a TypeScript.
 
-## 2. Repositórios
+## 2. Organização do repositório
 
-Manter frontend e backend separados. Cada repositório deve possuir seu próprio README, scripts, variáveis de ambiente de exemplo e pipeline.
+Monorepo: um Git, duas aplicações.
+
+```text
+apps/api    NestJS + Prisma + PostgreSQL
+apps/web    React + TypeScript
+docs/       produto, arquitetura e decisões
+```
+
+Cada aplicação deve ter o próprio `package.json`, `.env.example`, scripts e pipeline. Não colocar frontend e backend no mesmo `package.json`.
 
 ## 3. Backend
 

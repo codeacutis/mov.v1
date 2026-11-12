@@ -13,7 +13,7 @@ O Mov+ é uma aplicação web para planejamento e acompanhamento do transporte m
 - Persistência: PostgreSQL.
 - ORM: Prisma.
 - Integração: API REST.
-- Repositórios separados para frontend e backend.
+- Monorepo: `apps/api` (NestJS) e `apps/web` (React) no mesmo repositório Git; aplicações e deploys permanecem separados.
 
 **PROPOSED — organização do backend**
 - `Auth`: autenticação, sessão/token e autorização.

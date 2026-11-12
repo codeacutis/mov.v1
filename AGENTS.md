@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Estas instruções orientam agentes de IA e colaboradores que trabalhem nos repositórios do Mov+. A documentação de produto é a referência para regras de negócio; não invente regras ausentes.
+Estas instruções orientam agentes de IA e colaboradores que trabalhem no repositório do Mov+. A documentação de produto é a referência para regras de negócio; não invente regras ausentes. O código da API fica em `apps/api`; o frontend em `apps/web`.
 
 ## Antes de alterar código
 
