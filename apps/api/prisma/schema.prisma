@@ -1,13 +1,223 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// Schema do Mov+ — baseado em docs/architecture/DATA_MODEL.md.
+// Regras que o Prisma não expressa (exclusão de sobreposição de agenda, CHECKs)
+// ficam em SQL na migration `*_trips_agendamento`.
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MOTORISTA
+}
+
+enum VehicleStatus {
+  ACTIVE
+  IN_MAINTENANCE
+  INACTIVE
+}
+
+enum TripStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  INTERRUPTED
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ConfirmationStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  NO_RESPONSE
+}
+
+enum OutboundStatus {
+  PLANNED
+  BOARDED
+  NO_SHOW
+}
+
+enum ReturnStatus {
+  EXPECTED
+  RETURNED
+  NOT_RETURNING
+  NO_SHOW
+}
+
+model User {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+
+  driver            Driver?
+  auditLogs         AuditLog[]
+  prioritiesDefined PatientTrip[] @relation("PriorityDefinedBy")
+  tripsCancelled    Trip[]        @relation("TripCancelledBy")
+
+  @@map("users")
+}
+
+model Driver {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @unique @db.Uuid
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  user  User   @relation(fields: [userId], references: [id])
+  trips Trip[]
+
+  @@map("drivers")
+}
+
+model Vehicle {
+  id          String        @id @default(uuid(7)) @db.Uuid
+  plate       String        @unique
+  description String
+  /// Passageiros (pacientes + acompanhantes). Não inclui o motorista.
+  capacity    Int
+  status      VehicleStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @db.Timestamptz(3)
+
+  trips Trip[]
+
+  @@map("vehicles")
+}
+
+model Patient {
+  id                      String   @id @default(uuid(7)) @db.Uuid
+  name                    String
+  birthDate               DateTime @db.Date
+  /// PENDING (D-009): obrigatoriedade do telefone ainda não decidida.
+  phone                   String?
+  /// PENDING (D-009): necessidade de CPF ainda não decidida.
+  cpf                     String?  @unique
+  susCardNumber           String?
+  address                 String?
+  usesWheelchair          Boolean  @default(false)
+  hasReducedMobility      Boolean  @default(false)
+  needsBoardingAssistance Boolean  @default(false)
+  /// Observação operacional curta; sem dados clínicos.
+  operationalNote         String?
+  isActive                Boolean  @default(true)
+  createdAt               DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime @updatedAt @db.Timestamptz(3)
+
+  patientTrips PatientTrip[]
+
+  @@map("patients")
+}
+
+model Trip {
+  id                   String     @id @default(uuid(7)) @db.Uuid
+  vehicleId            String     @db.Uuid
+  driverId             String     @db.Uuid
+  municipalPickupPoint String
+  plannedDepartureAt   DateTime   @db.Timestamptz(3)
+  plannedReturnStartAt DateTime   @db.Timestamptz(3)
+  /// PROPOSED (D-023): fim planejado da operação; delimita o intervalo de ocupação
+  /// de motorista e veículo.
+  plannedReturnEndAt   DateTime   @db.Timestamptz(3)
+  actualDepartureAt    DateTime?  @db.Timestamptz(3)
+  actualReturnAt       DateTime?  @db.Timestamptz(3)
+  status               TripStatus @default(SCHEDULED)
+  cancelledAt          DateTime?  @db.Timestamptz(3)
+  cancelledByUserId    String?    @db.Uuid
+  cancellationReason   String?
+  createdAt            DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime   @updatedAt @db.Timestamptz(3)
+
+  vehicle      Vehicle       @relation(fields: [vehicleId], references: [id])
+  driver       Driver        @relation(fields: [driverId], references: [id])
+  cancelledBy  User?         @relation("TripCancelledBy", fields: [cancelledByUserId], references: [id])
+  patientTrips PatientTrip[]
+
+  @@index([driverId, plannedDepartureAt])
+  @@index([vehicleId, plannedDepartureAt])
+  @@index([status, plannedDepartureAt])
+  @@map("trips")
+}
+
+model PatientTrip {
+  id                      String             @id @default(uuid(7)) @db.Uuid
+  tripId                  String             @db.Uuid
+  patientId               String             @db.Uuid
+  appointmentLocationName String
+  appointmentAddress      String
+  appointmentMunicipality String
+  appointmentAt           DateTime           @db.Timestamptz(3)
+  priority                Priority
+  priorityJustification   String?
+  priorityDefinedByUserId String             @db.Uuid
+  priorityDefinedAt       DateTime           @db.Timestamptz(3)
+  confirmationStatus      ConfirmationStatus @default(PENDING)
+  outboundStatus          OutboundStatus     @default(PLANNED)
+  returnStatus            ReturnStatus       @default(EXPECTED)
+  returnAbsenceReason     String?
+  returnAbsenceReportedAt DateTime?          @db.Timestamptz(3)
+  returnAbsenceReportedBy String?
+  createdAt               DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime           @updatedAt @db.Timestamptz(3)
+
+  trip              Trip            @relation(fields: [tripId], references: [id])
+  patient           Patient         @relation(fields: [patientId], references: [id])
+  priorityDefinedBy User            @relation("PriorityDefinedBy", fields: [priorityDefinedByUserId], references: [id])
+  companions        TripCompanion[]
+
+  /// Impede o mesmo paciente duas vezes na mesma viagem (DATA_MODEL.md).
+  @@unique([tripId, patientId])
+  @@index([patientId])
+  @@map("patient_trips")
+}
+
+model TripCompanion {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  patientTripId String   @db.Uuid
+  name          String
+  phone         String
+  relationship  String?
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+
+  patientTrip PatientTrip @relation(fields: [patientTripId], references: [id], onDelete: Cascade)
+
+  @@index([patientTripId])
+  @@map("trip_companions")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  actorUserId String   @db.Uuid
+  action      String
+  entityType  String
+  entityId    String   @db.Uuid
+  occurredAt  DateTime @default(now()) @db.Timestamptz(3)
+  reason      String?
+  /// Mudanças minimizadas: nunca incluir dados pessoais completos nem segredos.
+  changes     Json?
+
+  actor User @relation(fields: [actorUserId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([actorUserId])
+  @@map("audit_logs")
 }
