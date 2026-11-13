@@ -39,7 +39,7 @@ A divisão em módulos deve refletir os limites de domínio, não necessariament
 
 ## 4. Fluxos principais
 
-### 4.1 Planejamento
+### 4.1 Planejamento ------
 1. Administrador cadastra ou seleciona pacientes.
 2. Cria uma viagem com horário fixo de saída municipal e horário fixo de início do retorno.
 3. Designa motorista e veículo.
