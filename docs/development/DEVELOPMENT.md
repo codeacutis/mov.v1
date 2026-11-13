@@ -68,3 +68,27 @@ Serviços de geocodificação/rota não estão definidos. Não acoplar regra de 
 ## 8. Deploy
 
 Vercel + Render + Supabase são opções propostas para demonstração acadêmica, não uma decisão de produção. Confirmar limites e políticas atuais. Não utilizar dados reais de saúde em ambiente gratuito sem avaliação formal.
+
+## 9. Comandos reais da API (`apps/api`)
+
+```bash
+cp .env.example .env            # preencha DATABASE_URL e JWT_SECRET (openssl rand -base64 48)
+npm install                     # gera o Prisma Client no postinstall
+npm run prisma:migrate          # aplica migrations (usa prisma7.config.ts)
+npm run start:dev
+npm test                        # unitários
+TEST_DATABASE_URL=postgresql://USUARIO@localhost:5432/mov_test npm run test:e2e:prepare
+TEST_DATABASE_URL=postgresql://USUARIO@localhost:5432/mov_test npm run test:e2e
+```
+
+O banco de teste deve ter nome terminando em `_test`; os e2e limpam as tabelas.
+
+### Endpoints de autenticação
+
+| Método | Rota | Acesso |
+|---|---|---|
+| POST | `/auth/bootstrap` | público, só enquanto não há usuários |
+| POST | `/auth/login` | público |
+| POST | `/auth/logout` | autenticado (204) |
+| GET | `/auth/me` | autenticado |
+| POST | `/users` | ADMIN |
