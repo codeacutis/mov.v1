@@ -130,3 +130,13 @@ Não permitir sobreposição de viagens para o mesmo motorista ou veículo. A pr
 **Status: PROPOSED / FUTURO**
 
 Não implementar inicialmente otimização avançada do tipo VRP com janelas de tempo. Começar com sugestão simples e aprovação administrativa. Evoluir após validar regras e dados operacionais.
+
+## D-023 — Autenticação (sessão no servidor + JWT)
+**Status: PROPOSED** (política de sessão/token segue PENDING em `ARCHITECTURE.md` §6)
+
+- **Login:** e-mail + senha; senha armazenada com bcrypt (custo 12); resposta idêntica para e-mail inexistente e senha errada.
+- **Sessão:** cada login cria um registro `Session` com expiração (`SESSION_TTL_SECONDS`, padrão 3600). O JWT carrega só `sub` e `sid`.
+- **Logout:** revoga a `Session` (`revokedAt`); o token deixa de valer na hora. O guard confere a sessão, a expiração e se o usuário está ativo a cada requisição; o papel é lido do banco.
+- **Cadastro:** `POST /auth/bootstrap` cria o primeiro ADMIN e só funciona enquanto não houver usuários (serializado por advisory lock). Depois, só ADMIN cadastra usuários (`POST /users`). Não há autocadastro público, para impedir escalada de privilégio.
+- **Senha:** mínimo 10 e máximo 72 caracteres (limite do bcrypt). Política provisória.
+- **Não incluído:** refresh token, recuperação de senha, limite de tentativas de login, limpeza de sessões expiradas, vínculo `Driver` 1:1 (D-003) para contas `MOTORISTA`.
