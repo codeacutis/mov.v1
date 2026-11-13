@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
-import AppLayout from "../components/AppLayout";
-import Campo from "../components/Campo";
-import Selecao from "../components/Selecao";
+import AppLayout from "../../components/AppLayout";
+import Campo from "../../components/Campo";
+import Selecao from "../../components/Selecao";
 
 interface CadastroVeiculoProps {
   onNavegar: (item: string) => void;

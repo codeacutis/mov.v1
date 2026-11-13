@@ -1,7 +1,7 @@
 ﻿import "./Relatorios.css";
 import { useState } from "react";
-import AppLayout from "../components/AppLayout";
-import Selecao from "../components/Selecao";
+import AppLayout from "../../components/AppLayout";
+import Selecao from "../../components/Selecao";
 
 interface RelatoriosProps {
   onNavegar: (item: string) => void;

@@ -1,7 +1,7 @@
 ﻿import "./Viagens.css";
 import { useState } from "react";
-import AppLayout from "../components/AppLayout";
-import FormularioViagem from "../components/FormularioViagem";
+import AppLayout from "../../components/AppLayout";
+import FormularioViagem from "../../components/FormularioViagem";
 
 interface ViagensProps {
   /** Abre direto o formulário de nova viagem. */
