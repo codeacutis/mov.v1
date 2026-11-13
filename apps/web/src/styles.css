@@ -1,0 +1,600 @@
+:root {
+  --bg: #f3f5f8;
+  --sf: #ffffff;
+  --ink: #14253a;
+  --mut: #5b6b7d;
+  --ln: #dce2ea;
+  --pri: #12355b;
+  --pri-ink: #ffffff;
+  --acc: #f2b705;
+  --lateral: #12355b;
+  --ok: #1e7b4f;
+  --ok-bg: #ddf1e5;
+  --link: #1f5fa8;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1520;
+    --sf: #152130;
+    --ink: #e7edf4;
+    --mut: #9baaba;
+    --ln: #26364a;
+    --pri: #8dbbef;
+    --pri-ink: #0d1520;
+    --lateral: #0a121c;
+    --ok: #6fd3a0;
+    --ok-bg: #143626;
+    --link: #8dbbef;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.5 Figtree, system-ui, sans-serif;
+}
+
+h1, h2 {
+  font-family: "Bricolage Grotesque", Figtree, sans-serif;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+/* Layout das telas de autenticação */
+.auth {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+}
+
+.auth__marca {
+  background: var(--lateral);
+  color: #fff;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.auth__marca h1 { font-size: 40px; line-height: 1.1; max-width: 440px; }
+.auth__marca p { color: #b9c8d8; max-width: 400px; }
+
+.auth__conteudo {
+  display: grid;
+  place-items: center;
+  padding: 30px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 700 22px "Bricolage Grotesque", sans-serif;
+  margin-bottom: 24px;
+}
+
+.logo__icone {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--acc);
+  color: #12355b;
+  font-size: 20px;
+}
+
+/* Formulário */
+.formulario { width: 100%; max-width: 360px; }
+.formulario h2 { font-size: 24px; margin-bottom: 6px; }
+.formulario__subtitulo { color: var(--mut); margin: 0 0 20px; }
+
+.formulario__linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.campo { margin-bottom: 14px; }
+.campo label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.campo__entrada { position: relative; }
+
+.campo input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--ln);
+  border-radius: 8px;
+  background: var(--sf);
+  color: var(--ink);
+  font: inherit;
+}
+
+.campo__acao {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: 600 13px Figtree, sans-serif;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+
+.link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--link);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link--voltar { text-decoration: none; margin-bottom: 18px; display: inline-block; }
+
+.botao {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--pri);
+  font: 600 15px Figtree, sans-serif;
+  cursor: pointer;
+}
+
+.botao--primario { background: var(--pri); color: var(--pri-ink); }
+
+.selo {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ok-bg);
+  color: var(--ok);
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+
+input:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--acc);
+  outline-offset: 2px;
+}
+
+@media (max-width: 860px) {
+  .auth { grid-template-columns: 1fr; }
+  .auth__marca { padding: 28px; }
+  .auth__marca h1 { font-size: 28px; }
+}
+
+/* ---------- Telas internas (menu lateral + conteúdo) ---------- */
+.app { min-height: 100vh; display: grid; grid-template-columns: 230px 1fr; }
+
+.menu {
+  background: var(--lateral);
+  color: #e8eef5;
+  padding: 18px 12px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: auto;
+}
+
+.menu .logo { color: #fff; padding: 4px 8px 18px; margin: 0; }
+.menu nav { display: flex; flex-direction: column; gap: 2px; }
+
+.menu__item {
+  text-align: left;
+  border: 0;
+  background: none;
+  color: #c9d6e4;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font: 500 15px Figtree, sans-serif;
+  cursor: pointer;
+}
+
+.menu__item:hover { background: rgba(255, 255, 255, 0.08); }
+.menu__item--ativo { background: var(--acc); color: #12355b; font-weight: 600; }
+.menu__item--sair { margin-top: 18px; }
+
+.app__conteudo { padding: 26px 30px 60px; max-width: 980px; width: 100%; }
+.cabecalho { margin-bottom: 20px; }
+.cabecalho h1 { font-size: 26px; }
+.cabecalho p { margin: 2px 0 0; color: var(--mut); }
+
+.cartao {
+  background: var(--sf);
+  border: 1px solid var(--ln);
+  border-radius: 12px;
+  padding: 22px;
+}
+
+.secao { border: 0; padding: 0; margin: 0 0 22px; }
+.secao legend {
+  font: 700 16px "Bricolage Grotesque", sans-serif;
+  padding: 0;
+  margin-bottom: 12px;
+}
+
+.grade { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+.campo--check { align-self: end; padding-bottom: 14px; }
+
+.campo select,
+.campo textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--ln);
+  border-radius: 8px;
+  background: var(--sf);
+  color: var(--ink);
+  font: inherit;
+}
+
+.campo textarea { resize: vertical; }
+
+.acoes {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid var(--ln);
+  padding-top: 18px;
+}
+
+.acoes .botao { width: auto; min-width: 150px; }
+.botao--secundario { background: var(--sf); color: var(--ink); border-color: var(--ln); }
+
+.aviso { padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-weight: 600; }
+.aviso--ok { background: var(--ok-bg); color: var(--ok); }
+
+select:focus-visible,
+textarea:focus-visible { outline: 3px solid var(--acc); outline-offset: 2px; }
+
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; }
+  .menu { position: static; height: auto; padding: 10px; }
+  .menu nav { flex-direction: row; overflow-x: auto; }
+  .menu__item { white-space: nowrap; }
+  .menu__item--sair { margin-top: 0; }
+  .app__conteudo { padding: 18px 14px 50px; }
+}
+
+@media (max-width: 560px) {
+  .grade { grid-template-columns: 1fr; }
+  .acoes { flex-direction: column-reverse; }
+  .acoes .botao { width: 100%; }
+}
+
+/* Correção: checkbox dentro de .campo herdava os estilos de input e label de texto */
+.campo .check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.check input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--pri);
+  cursor: pointer;
+}
+
+/* ---------- Cadastro de viagem ---------- */
+:root {
+  --alerta: #8a5a00;
+  --alerta-bg: #fff0c4;
+  --erro: #b3261e;
+  --erro-bg: #fbe1de;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --alerta: #f2c75c;
+    --alerta-bg: #3a2d0b;
+    --erro: #ff9c93;
+    --erro-bg: #401a17;
+  }
+}
+
+.duas-colunas {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.cartao__titulo { font-size: 18px; margin-bottom: 8px; }
+.texto-suave { color: var(--mut); margin: 0 0 8px; font-size: 14px; }
+.texto-erro { color: var(--erro); }
+
+.aviso--alerta { background: var(--alerta-bg); color: var(--alerta); font-weight: 500; }
+.aviso--erro { background: var(--erro-bg); color: var(--erro); font-weight: 500; }
+
+.medidor {
+  height: 9px;
+  background: var(--bg);
+  border: 1px solid var(--ln);
+  border-radius: 9px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.medidor i { display: block; height: 100%; background: var(--pri); }
+.medidor .medidor__erro { background: var(--erro); }
+
+.lista-passageiros { list-style: none; margin: 0; padding: 0; }
+.lista-passageiros li { border-bottom: 1px solid var(--ln); }
+.lista-passageiros li:last-child { border-bottom: 0; }
+
+.passageiro { padding: 10px 0; align-items: flex-start; cursor: pointer; }
+.passageiro small { display: block; color: var(--mut); font-size: 13px; }
+
+.botao:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (max-width: 960px) {
+  .duas-colunas { grid-template-columns: 1fr; }
+}
+
+/* ---------- Relatórios ---------- */
+.cabecalho--linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cabecalho__acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.cabecalho__acoes .botao { width: auto; }
+
+.filtros { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.filtros .campo { margin: 0; min-width: 200px; }
+
+.indicadores {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.indicador { display: flex; flex-direction: column; padding: 16px; }
+.indicador span { color: var(--mut); font-size: 13px; }
+.indicador strong { font: 700 30px "Bricolage Grotesque", sans-serif; line-height: 1.2; }
+.indicador small { color: var(--mut); font-size: 12px; }
+
+.duas-colunas--iguais { grid-template-columns: 1fr 1fr; }
+
+.barras { list-style: none; margin: 0; padding: 0; }
+.barras li { margin-bottom: 12px; }
+.barras__texto { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; }
+.barras .medidor { margin-bottom: 0; }
+
+.tabela-rolagem { overflow-x: auto; }
+.tabela { width: 100%; border-collapse: collapse; }
+.tabela th {
+  text-align: left;
+  font-size: 13px;
+  color: var(--mut);
+  font-weight: 600;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--ln);
+}
+.tabela td { padding: 11px 10px; border-bottom: 1px solid var(--ln); font-size: 14px; }
+
+@media (max-width: 960px) {
+  .indicadores { grid-template-columns: 1fr 1fr; }
+  .duas-colunas--iguais { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .indicadores { grid-template-columns: 1fr; }
+}
+
+/* ---------- Agenda da frota ---------- */
+:root {
+  --info: #1f5fa8;
+  --info-bg: #dfeaf9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --info: #8dbbef;
+    --info-bg: #14283f;
+  }
+}
+
+.filtros--agenda { align-items: flex-end; justify-content: space-between; }
+.navegacao-semana { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.navegacao-semana .botao { width: auto; padding: 9px 14px; }
+.navegacao-semana__titulo { margin-left: 6px; font-family: "Bricolage Grotesque", sans-serif; }
+
+.agenda { width: 100%; min-width: 860px; border-collapse: separate; border-spacing: 4px; table-layout: fixed; }
+.agenda__canto, .agenda__dia { text-align: left; font-size: 13px; font-weight: 600; color: var(--mut); padding: 6px 8px; }
+.agenda__canto { width: 120px; }
+.agenda__dia--hoje { color: var(--ink); border-bottom: 3px solid var(--acc); }
+.agenda__veiculo { text-align: left; vertical-align: top; padding: 8px; font-weight: 700; }
+.agenda__veiculo small { display: block; color: var(--mut); font-weight: 400; font-size: 12px; }
+.agenda__celula { vertical-align: top; background: var(--bg); border-radius: 8px; padding: 4px; height: 64px; }
+.agenda__celula--hoje { outline: 2px solid var(--acc); outline-offset: -2px; }
+
+.evento {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 6px;
+  margin-bottom: 3px;
+  font: 500 12px/1.3 Figtree, sans-serif;
+  cursor: pointer;
+}
+
+.evento--ativo { outline: 2px solid var(--ink); }
+.evento--agendada { background: var(--info-bg); color: var(--info); }
+.evento--andamento { background: var(--ok-bg); color: var(--ok); }
+.evento--concluida { background: var(--sf); color: var(--mut); border-color: var(--ln); }
+.evento--conflito { background: var(--alerta-bg); color: var(--alerta); }
+.evento--manutencao { background: var(--erro-bg); color: var(--erro); }
+
+.legenda { list-style: none; display: flex; gap: 16px; flex-wrap: wrap; margin: 14px 0 0; padding: 0; font-size: 13px; color: var(--mut); }
+.legenda li { display: flex; align-items: center; gap: 6px; }
+.legenda__cor { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--ln); }
+
+.detalhes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 0 0 4px; }
+.detalhes dt { font-size: 12px; color: var(--mut); }
+.detalhes dd { margin: 0; font-weight: 600; }
+
+/* ---------- App do motorista (moldura de celular) ---------- */
+:root { --moldura: #1b2a3c; }
+
+@media (prefers-color-scheme: dark) {
+  :root { --moldura: #2a3d57; }
+}
+
+.celular {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 18px 14px;
+  border: 10px solid var(--moldura);
+  border-radius: 34px;
+  background: var(--bg);
+}
+
+.celular__titulo { font-size: 22px; }
+.celular .cartao { padding: 14px; margin-bottom: 10px; }
+.celular .botao { width: 100%; }
+.celular .campo { margin-bottom: 0; }
+.celular .aviso { margin-bottom: 10px; }
+.celular .lista-passageiros li { border-bottom: 0; }
+.celular .passageiro { padding: 6px 0; align-items: center; }
+
+.cartao__subtitulo { font: 700 16px "Bricolage Grotesque", sans-serif; margin: 0 0 8px; }
+.acoes--coluna { flex-direction: column; border-top: 0; padding-top: 0; }
+.acoes--coluna .botao { width: 100%; }
+
+.status {
+  display: inline-block;
+  padding: 2px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status--ok { background: var(--ok-bg); color: var(--ok); }
+.status--info { background: var(--info-bg); color: var(--info); }
+
+/* ---------- Lista de viagens ---------- */
+.abas { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+
+.aba {
+  border: 1px solid var(--ln);
+  background: var(--sf);
+  color: var(--ink);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font: 600 14px Figtree, sans-serif;
+  cursor: pointer;
+}
+
+.aba--ativa { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.filtro {
+  padding: 10px 12px;
+  border: 1px solid var(--ln);
+  border-radius: 8px;
+  background: var(--sf);
+  color: var(--ink);
+  font: 14px Figtree, sans-serif;
+  min-width: 170px;
+}
+
+.filtro:focus-visible, .aba:focus-visible { outline: 3px solid var(--acc); outline-offset: 2px; }
+
+.tabela__sub { display: block; color: var(--mut); font-size: 12px; }
+.status--alerta { background: var(--alerta-bg); color: var(--alerta); }
+.status--erro { background: var(--erro-bg); color: var(--erro); }
+.tabela td .status { white-space: nowrap; }
+
+/* ---------- Menu lateral em grupos ---------- */
+.menu__grupo { display: flex; flex-direction: column; gap: 2px; }
+
+.menu__titulo {
+  margin: 16px 12px 4px;
+  font-size: 12px;
+  color: #8fa3b8;
+}
+
+.menu__grupo:first-child .menu__titulo { margin-top: 4px; }
+.menu__item--sair { margin-top: 0; }
+
+@media (max-width: 860px) {
+  .menu nav { gap: 12px; }
+  .menu__grupo { flex-direction: row; gap: 4px; }
+  .menu__titulo { display: none; }
+}
+
+/* ---------- Painel ---------- */
+.aviso--info { background: var(--info-bg); color: var(--info); font-weight: 500; }
+
+.cartao__cabecalho { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.cartao__cabecalho .cartao__titulo { margin-bottom: 8px; }
+
+.lista-hoje { list-style: none; margin: 0; padding: 0; }
+.lista-hoje li {
+  display: grid;
+  grid-template-columns: 56px 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ln);
+}
+.lista-hoje li:last-child { border-bottom: 0; }
+.lista-hoje time { font: 700 17px "Bricolage Grotesque", sans-serif; }
+
+.grafico { display: flex; align-items: stretch; gap: 10px; height: 190px; }
+.grafico__coluna {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 12px;
+  color: var(--mut);
+}
+.grafico__coluna strong { color: var(--ink); font-size: 13px; }
+.grafico__area { flex: 1; width: 100%; display: flex; align-items: flex-end; margin-bottom: 6px; }
+.grafico__barra { width: 100%; background: var(--pri); border-radius: 6px 6px 0 0; }
+
+.lista-frota { list-style: none; margin: 0; padding: 0; }
+.lista-frota li {
+  display: grid;
+  grid-template-columns: 70px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+.lista-frota .status { justify-self: start; }
+.lista-frota .texto-suave { margin: 0; }
+
+/* Conteúdo sem limite de largura: o celular fica centralizado na área ao lado do menu */
+.app__conteudo--total { max-width: none; }
