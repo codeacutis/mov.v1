@@ -10,7 +10,7 @@ Apoiar a Secretaria Municipal de Saúde na organização do transporte de pacien
 - **RF-02 — Papéis:** distinguir ADMIN e MOTORISTA.
 - **RF-03 — Usuários/motoristas:** manter vínculo 1:1 entre conta de motorista e cadastro operacional.
 - **RF-04 — Pacientes:** cadastrar e manter dados mínimos necessários.
-- **RF-05 — Veículos:** cadastrar capacidade e situação operacional.
+- **RF-05 — Veículos:** permitir ao ADMIN cadastrar, consultar, editar e inativar veículos; validar capacidade positiva e situação operacional, mantendo histórico por inativação lógica.
 - **RF-06 — Viagens:** criar viagem de ida e volta com saída municipal e início de retorno planejados.
 - **RF-07 — Alocação:** designar um motorista e um veículo por viagem.
 - **RF-08 — Participantes:** adicionar pacientes à viagem e registrar acompanhantes.

@@ -1,213 +1,276 @@
-import { useState, type FormEvent } from "react";
-import AppLayout from "../../components/AppLayout";
-import Campo from "../../components/Campo";
-import Selecao from "../../components/Selecao";
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import AppLayout from '../../components/AppLayout';
+import Campo from '../../components/Campo';
+import Selecao from '../../components/Selecao';
+import { apiRequest, ApiRequestError } from '../../services/api';
+import './CadastroVeiculo.css';
 
 interface CadastroVeiculoProps {
   onNavegar: (item: string) => void;
   onSair: () => void;
 }
 
-interface FormVeiculo {
-  placa: string;
-  identificacao: string;
-  modelo: string;
-  ano: string;
-  tipo: string;
-  lugares: string;
-  acessivel: boolean;
-  combustivel: string;
-  kmAtual: string;
-  proximaRevisao: string;
-  situacao: string;
-  observacoes: string;
+type VehicleStatus = 'ACTIVE' | 'IN_MAINTENANCE' | 'INACTIVE';
+interface Vehicle {
+  id: string;
+  plate: string;
+  description: string | null;
+  capacity: number;
+  status: VehicleStatus;
+}
+interface VehicleForm {
+  plate: string;
+  description: string;
+  capacity: string;
+  status: VehicleStatus;
 }
 
-const TIPOS = ["Van", "Micro-ônibus", "Ônibus", "Carro", "Carro adaptado", "Ambulância"];
-const COMBUSTIVEIS = ["Flex", "Gasolina", "Etanol", "Diesel", "Elétrico"];
-const SITUACOES = ["Disponível", "Em manutenção"];
-
-const FORM_VAZIO: FormVeiculo = {
-  placa: "",
-  identificacao: "",
-  modelo: "",
-  ano: "",
-  tipo: TIPOS[0],
-  lugares: "",
-  acessivel: false,
-  combustivel: COMBUSTIVEIS[0],
-  kmAtual: "",
-  proximaRevisao: "",
-  situacao: SITUACOES[0],
-  observacoes: "",
+const STATUS_OPTIONS = [
+  { valor: 'ACTIVE', rotulo: 'Disponível' },
+  { valor: 'IN_MAINTENANCE', rotulo: 'Em manutenção' },
+  { valor: 'INACTIVE', rotulo: 'Inativo' },
+];
+const STATUS_LABEL: Record<VehicleStatus, string> = {
+  ACTIVE: 'Disponível',
+  IN_MAINTENANCE: 'Em manutenção',
+  INACTIVE: 'Inativo',
+};
+const EMPTY_FORM: VehicleForm = {
+  plate: '',
+  description: '',
+  capacity: '',
+  status: 'ACTIVE',
 };
 
+function errorMessage(error: unknown): string {
+  if (error instanceof ApiRequestError && error.status === 401) {
+    return 'Sua sessão expirou. Entre novamente para continuar.';
+  }
+  if (error instanceof ApiRequestError && error.status === 403) {
+    return 'Seu usuário não tem permissão para gerenciar veículos.';
+  }
+  if (error instanceof TypeError) {
+    return 'Não foi possível acessar a API. Confira se o backend está em execução.';
+  }
+  return error instanceof Error ? error.message : 'Ocorreu um erro inesperado.';
+}
+
 export default function CadastroVeiculo({ onNavegar, onSair }: CadastroVeiculoProps) {
-  const [form, setForm] = useState<FormVeiculo>(FORM_VAZIO);
-  const [salvo, setSalvo] = useState(false);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState<VehicleForm>(EMPTY_FORM);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
-  function atualizar<K extends keyof FormVeiculo>(campo: K, valor: FormVeiculo[K]) {
-    setSalvo(false);
-    setForm((anterior) => ({ ...anterior, [campo]: valor }));
+  const loadVehicles = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setVehicles(await apiRequest<Vehicle[]>('/vehicles'));
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadVehicles();
+  }, [loadVehicles]);
+
+  function openCreateForm() {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+    setNotice('');
+    setError('');
+    setFormOpen(true);
   }
 
-  // Tela apenas visual: nada é enviado, só exibe a confirmação e limpa o formulário.
-  function aoEnviar(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setForm(FORM_VAZIO);
-    setSalvo(true);
+  function openEditForm(vehicle: Vehicle) {
+    setEditingId(vehicle.id);
+    setForm({
+      plate: vehicle.plate,
+      description: vehicle.description ?? '',
+      capacity: String(vehicle.capacity),
+      status: vehicle.status,
+    });
+    setNotice('');
+    setError('');
+    setFormOpen(true);
   }
 
-  function aoCancelar() {
-    setForm(FORM_VAZIO);
-    setSalvo(false);
+  function cancelForm() {
+    setFormOpen(false);
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+    setError('');
+  }
+
+  async function saveVehicle(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaving(true);
+    setError('');
+    setNotice('');
+    const payload = {
+      plate: form.plate.trim().toUpperCase(),
+      description: form.description.trim() || null,
+      capacity: Number(form.capacity),
+      status: form.status,
+    };
+    try {
+      if (editingId) {
+        await apiRequest<Vehicle>(`/vehicles/${editingId}`, {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+        setNotice('Veículo atualizado.');
+      } else {
+        await apiRequest<Vehicle>('/vehicles', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        setNotice('Veículo cadastrado.');
+      }
+      setFormOpen(false);
+      setEditingId(null);
+      setForm(EMPTY_FORM);
+      await loadVehicles();
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function inactivate(vehicle: Vehicle) {
+    if (!window.confirm(`Inativar o veículo ${vehicle.plate}?`)) return;
+    setError('');
+    setNotice('');
+    try {
+      await apiRequest<Vehicle>(`/vehicles/${vehicle.id}/inactivate`, {
+        method: 'PATCH',
+      });
+      setNotice(`Veículo ${vehicle.plate} inativado.`);
+      await loadVehicles();
+    } catch (cause) {
+      setError(errorMessage(cause));
+    }
   }
 
   return (
     <AppLayout ativo="Veículos" onNavegar={onNavegar} onSair={onSair}>
-      <header className="cabecalho">
-        <h1>Cadastrar veículo</h1>
-        <p>Preencha os dados para incluir um veículo na frota municipal.</p>
+      <header className="cabecalho cabecalho--linha">
+        <div>
+          <h1>Veículos</h1>
+          <p>Cadastre e mantenha a frota municipal.</p>
+        </div>
+        {!formOpen && (
+          <button className="botao botao--primario veiculos__novo" onClick={openCreateForm}>
+            Novo veículo
+          </button>
+        )}
       </header>
 
-      {salvo && (
-        <div className="aviso aviso--ok" role="status">
-          Veículo cadastrado com sucesso.
-        </div>
-      )}
+      {notice && <div className="aviso aviso--ok" role="status">{notice}</div>}
+      {error && <div className="aviso aviso--erro" role="alert">{error}</div>}
 
-      <form className="cartao" onSubmit={aoEnviar}>
-        <fieldset className="secao">
-          <legend>Identificação</legend>
+      {formOpen ? (
+        <form className="cartao veiculos__form" onSubmit={saveVehicle}>
+          <h2 className="cartao__titulo">{editingId ? 'Editar veículo' : 'Cadastrar veículo'}</h2>
           <div className="grade">
             <Campo
-              id="placa"
+              id="vehicle-plate"
               rotulo="Placa"
               placeholder="ABC1D23"
               maxLength={7}
-              value={form.placa}
-              onChange={(e) => atualizar("placa", e.target.value.toUpperCase())}
+              pattern="[A-Za-z0-9]{7}"
+              autoCapitalize="characters"
+              value={form.plate}
+              onChange={(event) => setForm({ ...form, plate: event.target.value.toUpperCase() })}
               required
             />
             <Campo
-              id="identificacao"
-              rotulo="Identificação na frota"
-              placeholder="VAN-03"
-              value={form.identificacao}
-              onChange={(e) => atualizar("identificacao", e.target.value.toUpperCase())}
-              required
+              id="vehicle-description"
+              rotulo="Descrição ou modelo"
+              placeholder="Van de passageiros"
+              maxLength={160}
+              value={form.description}
+              onChange={(event) => setForm({ ...form, description: event.target.value })}
             />
             <Campo
-              id="modelo"
-              rotulo="Marca e modelo"
-              placeholder="Mercedes Sprinter"
-              value={form.modelo}
-              onChange={(e) => atualizar("modelo", e.target.value)}
-              required
-            />
-            <Campo
-              id="ano"
-              rotulo="Ano de fabricação"
-              type="number"
-              min={1990}
-              max={2100}
-              placeholder="2022"
-              value={form.ano}
-              onChange={(e) => atualizar("ano", e.target.value)}
-              required
-            />
-          </div>
-        </fieldset>
-
-        <fieldset className="secao">
-          <legend>Características</legend>
-          <div className="grade">
-            <Selecao
-              id="tipo"
-              rotulo="Tipo de veículo"
-              opcoes={TIPOS}
-              value={form.tipo}
-              onChange={(e) => atualizar("tipo", e.target.value)}
-            />
-            <Campo
-              id="lugares"
-              rotulo="Lugares para passageiros"
+              id="vehicle-capacity"
+              rotulo="Capacidade de passageiros"
               type="number"
               min={1}
-              placeholder="12"
-              value={form.lugares}
-              onChange={(e) => atualizar("lugares", e.target.value)}
+              step={1}
+              value={form.capacity}
+              onChange={(event) => setForm({ ...form, capacity: event.target.value })}
               required
             />
             <Selecao
-              id="combustivel"
-              rotulo="Combustível"
-              opcoes={COMBUSTIVEIS}
-              value={form.combustivel}
-              onChange={(e) => atualizar("combustivel", e.target.value)}
+              id="vehicle-status"
+              rotulo="Situação"
+              opcoes={STATUS_OPTIONS}
+              value={form.status}
+              onChange={(event) => setForm({ ...form, status: event.target.value as VehicleStatus })}
             />
-            <div className="campo campo--check">
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={form.acessivel}
-                  onChange={(e) => atualizar("acessivel", e.target.checked)}
-                />
-                Possui elevador ou rampa para cadeirante
-              </label>
+          </div>
+          <p className="texto-suave">A capacidade considera passageiros e acompanhantes; o motorista não é contado.</p>
+          <div className="acoes">
+            <button type="button" className="botao botao--secundario" onClick={cancelForm} disabled={saving}>
+              Cancelar
+            </button>
+            <button type="submit" className="botao botao--primario" disabled={saving}>
+              {saving ? 'Salvando…' : editingId ? 'Salvar alterações' : 'Cadastrar veículo'}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <section className="cartao veiculos__lista" aria-labelledby="veiculos-titulo">
+          <h2 id="veiculos-titulo" className="cartao__titulo">Frota cadastrada</h2>
+          {loading ? (
+            <p role="status">Carregando veículos…</p>
+          ) : vehicles.length === 0 ? (
+            <p className="texto-suave">Nenhum veículo cadastrado.</p>
+          ) : (
+            <div className="tabela-rolagem">
+              <table className="tabela">
+                <thead>
+                  <tr><th>Placa</th><th>Descrição</th><th>Capacidade</th><th>Situação</th><th>Ações</th></tr>
+                </thead>
+                <tbody>
+                  {vehicles.map((vehicle) => (
+                    <tr key={vehicle.id}>
+                      <td><strong>{vehicle.plate}</strong></td>
+                      <td>{vehicle.description || '—'}</td>
+                      <td>{vehicle.capacity}</td>
+                      <td>
+                        <span className={`status ${vehicle.status === 'ACTIVE' ? 'status--ok' : vehicle.status === 'INACTIVE' ? 'status--erro' : 'status--alerta'}`}>
+                          {STATUS_LABEL[vehicle.status]}
+                        </span>
+                      </td>
+                      <td className="veiculos__acoes">
+                        <button className="link" type="button" onClick={() => openEditForm(vehicle)}>Editar</button>
+                        {vehicle.status !== 'INACTIVE' && (
+                          <button className="link veiculos__inativar" type="button" onClick={() => void inactivate(vehicle)}>
+                            Inativar
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          </div>
-        </fieldset>
-
-        <fieldset className="secao">
-          <legend>Uso e manutenção</legend>
-          <div className="grade">
-            <Campo
-              id="km"
-              rotulo="Quilometragem atual"
-              type="number"
-              min={0}
-              placeholder="48210"
-              value={form.kmAtual}
-              onChange={(e) => atualizar("kmAtual", e.target.value)}
-              required
-            />
-            <Campo
-              id="revisao"
-              rotulo="Próxima revisão"
-              type="date"
-              value={form.proximaRevisao}
-              onChange={(e) => atualizar("proximaRevisao", e.target.value)}
-            />
-            <Selecao
-              id="situacao"
-              rotulo="Situação inicial"
-              opcoes={SITUACOES}
-              value={form.situacao}
-              onChange={(e) => atualizar("situacao", e.target.value)}
-            />
-          </div>
-          <div className="campo">
-            <label htmlFor="observacoes">Observações</label>
-            <textarea
-              id="observacoes"
-              rows={3}
-              placeholder="Ex.: ar-condicionado com defeito, uso exclusivo da Saúde"
-              value={form.observacoes}
-              onChange={(e) => atualizar("observacoes", e.target.value)}
-            />
-          </div>
-        </fieldset>
-
-        <div className="acoes">
-          <button type="button" className="botao botao--secundario" onClick={aoCancelar}>
-            Cancelar
+          )}
+          <button type="button" className="botao botao--secundario veiculos__atualizar" onClick={() => void loadVehicles()} disabled={loading}>
+            Atualizar lista
           </button>
-          <button type="submit" className="botao botao--primario">
-            Salvar veículo
-          </button>
-        </div>
-      </form>
+        </section>
+      )}
     </AppLayout>
   );
 }

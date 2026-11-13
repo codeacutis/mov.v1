@@ -1,0 +1,12 @@
+.veiculos__novo { width: auto; min-width: 160px; }
+.veiculos__form { max-width: 760px; }
+.veiculos__lista { padding: 20px; }
+.veiculos__acoes { white-space: nowrap; }
+.veiculos__acoes .link + .link { margin-left: 12px; }
+.veiculos__inativar { color: var(--erro); }
+.veiculos__atualizar { width: auto; min-width: 160px; margin-top: 16px; }
+
+@media (max-width: 560px) {
+  .veiculos__novo,
+  .veiculos__atualizar { width: 100%; }
+}

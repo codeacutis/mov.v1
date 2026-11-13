@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiRequest, clearAccessToken } from "./services/api";
 import Login from "./pages/Login";
 import RecuperarSenha from "./pages/RecuperarSenha";
 import Painel from "./pages/Painel";
@@ -50,7 +51,17 @@ export default function App() {
     if (destino) setTela(destino);
   }
 
-  const interna = { onNavegar: navegar, onSair: () => setTela("login") };
+  async function sair() {
+    try {
+      await apiRequest<void>("/auth/logout", { method: "POST" });
+    } catch {
+      // A sessão local é removida mesmo quando a API não responde.
+    } finally {
+      clearAccessToken();
+      setTela("login");
+    }
+  }
+  const interna = { onNavegar: navegar, onSair: sair };
 
   switch (tela) {
     case "recuperar":
