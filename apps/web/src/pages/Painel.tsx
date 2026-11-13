@@ -1,3 +1,4 @@
+﻿import "./Painel.css";
 import AppLayout from "../components/AppLayout";
 
 interface PainelProps {
@@ -144,3 +145,4 @@ export default function Painel({ onNavegar, onSair }: PainelProps) {
     </AppLayout>
   );
 }
+

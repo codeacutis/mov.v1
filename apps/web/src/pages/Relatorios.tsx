@@ -1,3 +1,4 @@
+﻿import "./Relatorios.css";
 import { useState } from "react";
 import AppLayout from "../components/AppLayout";
 import Selecao from "../components/Selecao";
@@ -168,3 +169,4 @@ export default function Relatorios({ onNavegar, onSair }: RelatoriosProps) {
     </AppLayout>
   );
 }
+

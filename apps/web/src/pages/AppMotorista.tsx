@@ -1,3 +1,4 @@
+﻿import "./AppMotorista.css";
 import { useState, type FormEvent } from "react";
 import AppLayout from "../components/AppLayout";
 import Campo from "../components/Campo";
@@ -180,3 +181,4 @@ export default function AppMotorista({ onNavegar, onSair }: AppMotoristaProps) {
     </AppLayout>
   );
 }
+

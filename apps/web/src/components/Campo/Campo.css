@@ -1,0 +1,68 @@
+/* ---------- Campo de formulário ---------- */
+.campo { margin-bottom: 14px; }
+.campo label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.campo__entrada { position: relative; }
+
+.campo input {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--ln);
+  border-radius: 8px;
+  background: var(--sf);
+  color: var(--ink);
+  font: inherit;
+}
+
+.campo select,
+.campo textarea {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--ln);
+  border-radius: 8px;
+  background: var(--sf);
+  color: var(--ink);
+  font: inherit;
+}
+
+.campo textarea { resize: vertical; }
+
+.campo__acao {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: none;
+  color: var(--link);
+  font: 600 13px Figtree, sans-serif;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+/* Correção: checkbox dentro de .campo não herda estilos de input de texto */
+.campo .check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.campo--check { align-self: end; padding-bottom: 14px; }
+
+.check input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--pri);
+  cursor: pointer;
+}
+
+input:focus-visible,
+button:focus-visible { outline: 3px solid var(--acc); outline-offset: 2px; }
+
+select:focus-visible,
+textarea:focus-visible { outline: 3px solid var(--acc); outline-offset: 2px; }

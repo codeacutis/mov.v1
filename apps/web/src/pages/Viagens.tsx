@@ -1,3 +1,4 @@
+﻿import "./Viagens.css";
 import { useState } from "react";
 import AppLayout from "../components/AppLayout";
 import FormularioViagem from "../components/FormularioViagem";
@@ -235,3 +236,4 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
     </AppLayout>
   );
 }
+

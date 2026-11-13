@@ -1,0 +1,40 @@
+﻿
+/* ---------- App do motorista (moldura de celular) ---------- */
+:root { --moldura: #1b2a3c; }
+
+@media (prefers-color-scheme: dark) {
+  :root { --moldura: #2a3d57; }
+}
+
+.celular {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  padding: 18px 14px;
+  border: 10px solid var(--moldura);
+  border-radius: 34px;
+  background: var(--bg);
+}
+
+.celular__titulo { font-size: 22px; }
+.celular .cartao { padding: 14px; margin-bottom: 10px; }
+.celular .botao { width: 100%; }
+.celular .campo { margin-bottom: 0; }
+.celular .aviso { margin-bottom: 10px; }
+.celular .lista-passageiros li { border-bottom: 0; }
+.celular .passageiro { padding: 6px 0; align-items: center; }
+
+.cartao__subtitulo { font: 700 16px "Bricolage Grotesque", sans-serif; margin: 0 0 8px; }
+.acoes--coluna { flex-direction: column; border-top: 0; padding-top: 0; }
+.acoes--coluna .botao { width: 100%; }
+
+.status {
+  display: inline-block;
+  padding: 2px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status--ok { background: var(--ok-bg); color: var(--ok); }
+.status--info { background: var(--info-bg); color: var(--info); }

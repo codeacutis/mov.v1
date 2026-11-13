@@ -1,3 +1,4 @@
+﻿import "./AgendaFrota.css";
 import { useState } from "react";
 import AppLayout from "../components/AppLayout";
 import Selecao from "../components/Selecao";
@@ -215,3 +216,4 @@ export default function AgendaFrota({ onNavegar, onSair }: AgendaFrotaProps) {
     </AppLayout>
   );
 }
+
