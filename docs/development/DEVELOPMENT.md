@@ -68,33 +68,3 @@ Serviços de geocodificação/rota não estão definidos. Não acoplar regra de 
 ## 8. Deploy
 
 Vercel + Render + Supabase são opções propostas para demonstração acadêmica, não uma decisão de produção. Confirmar limites e políticas atuais. Não utilizar dados reais de saúde em ambiente gratuito sem avaliação formal.
-
-## 9. Comandos reais da API (`apps/api`)
-
-```bash
-cp .env.example .env            # preencha DATABASE_URL e JWT_SECRET (openssl rand -base64 48)
-npm install                     # gera o Prisma Client no postinstall
-npm run prisma:migrate          # aplica migrations (usa prisma7.config.ts)
-npm run db:seed                 # dados FICTÍCIOS; SEED_PASSWORD opcional
-npm run start:dev
-npm test                        # unitários
-TEST_DATABASE_URL=postgresql://USUARIO@localhost:5432/mov_test npm run test:e2e:prepare
-TEST_DATABASE_URL=postgresql://USUARIO@localhost:5432/mov_test npm run test:e2e
-```
-
-O banco de teste deve ter nome terminando em `_test`; os e2e limpam as tabelas a cada teste.
-
-### Endpoints de agendamento
-
-| Método | Rota | Papel |
-|---|---|---|
-| POST | `/auth/login` | público |
-| GET | `/trips`, `/trips/:id` | ADMIN (completo), MOTORISTA (só atribuídas, visão reduzida) |
-| POST | `/trips` | ADMIN |
-| PATCH | `/trips/:id` | ADMIN (só `SCHEDULED`) |
-| POST | `/trips/:id/cancel` | ADMIN (só `SCHEDULED`, motivo obrigatório) |
-| POST | `/trips/:id/patients` | ADMIN |
-| PATCH | `/trips/:id/patients/:patientTripId` | ADMIN |
-| POST / DELETE | `/trips/:id/patients/:patientTripId/companions[/:companionId]` | ADMIN |
-
-Datas em ISO-8601 com fuso (ex.: `2027-01-10T06:00:00-03:00`).

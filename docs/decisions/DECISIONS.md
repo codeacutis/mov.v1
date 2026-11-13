@@ -130,20 +130,3 @@ Não permitir sobreposição de viagens para o mesmo motorista ou veículo. A pr
 **Status: PROPOSED / FUTURO**
 
 Não implementar inicialmente otimização avançada do tipo VRP com janelas de tempo. Começar com sugestão simples e aprovação administrativa. Evoluir após validar regras e dados operacionais.
-
-## D-023 — Fim planejado da operação (intervalo de ocupação)
-**Status: PROPOSED**
-
-O modelo original só tinha `plannedDepartureAt` e `plannedReturnStartAt`, o que não delimita o intervalo em que motorista e veículo ficam ocupados. Foi adicionado `Trip.plannedReturnEndAt` (fim planejado do retorno). O conflito de agenda (D-021) usa o intervalo semiaberto `[plannedDepartureAt, plannedReturnEndAt)`; viagens que apenas encostam no limite não conflitam. Somente viagens `SCHEDULED` e `IN_PROGRESS` ocupam a agenda; `CANCELLED`, `COMPLETED` e `INTERRUPTED` liberam.
-
-**Limitação:** o intervalo usa horários planejados; uma viagem em andamento que ultrapasse o fim planejado ainda não bloqueia a agenda além dele. **Aguarda aprovação do responsável pelo produto.**
-
-## D-024 — Justificativa obrigatória da prioridade
-**Status: PROPOSED**
-
-Decorre de D-013 ("responsável, instante e justificativa"): `priorityJustification` é obrigatória ao definir ou alterar a prioridade de uma `PatientTrip`.
-
-## D-025 — Autenticação provisória
-**Status: PROPOSED (política de sessão segue PENDING)**
-
-Login por e-mail/senha (hash bcrypt) com JWT de acesso (`JWT_EXPIRES_IN`, padrão 1h). Sem refresh token, recuperação de senha ou limite de tentativas. O papel e a situação ativa do usuário são relidos do banco a cada requisição.

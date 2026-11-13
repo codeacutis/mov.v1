@@ -48,7 +48,6 @@ Idade deve ser calculada a partir de `birthDate`; não persistir idade como dado
 - `municipalPickupPoint` ou referência a ponto cadastrado
 - `plannedDepartureAt`
 - `plannedReturnStartAt` (horário fixo de início do percurso de retorno)
-- `plannedReturnEndAt` (**PROPOSED**, D-023: fim planejado; delimita a ocupação de motorista e veículo)
 - `actualDepartureAt`
 - `actualReturnAt`
 - `status`: `SCHEDULED | IN_PROGRESS | COMPLETED | CANCELLED | INTERRUPTED`
@@ -152,15 +151,3 @@ A prioridade é contextual à consulta/viagem e não deve ficar em `Patient`.
 4. Política para paciente que não embarca na ida.
 5. Cardinalidade e unicidade dos registros de confirmação.
 6. Regras de retenção e anonimização.
-
-## Implementação atual (apps/api/prisma)
-
-Migration `trips_agendamento` implementa: `User`, `Driver`, `Vehicle`, `Patient`, `Trip`, `PatientTrip`, `TripCompanion` e `AuditLog`. **Ainda não implementados:** `TripStop` e `ConfirmationLog` (dependem de decisões PENDING).
-
-Garantias no PostgreSQL (extensão `btree_gist`):
-- `EXCLUDE` impedindo sobreposição de motorista e de veículo entre viagens `SCHEDULED`/`IN_PROGRESS`;
-- `CHECK` na ordem saída < início do retorno < fim do retorno;
-- `CHECK` de capacidade positiva e de motivo/instante no cancelamento;
-- `UNIQUE (tripId, patientId)`.
-
-A capacidade é garantida na API, em transação, com a linha da viagem travada (`SELECT … FOR UPDATE`).
