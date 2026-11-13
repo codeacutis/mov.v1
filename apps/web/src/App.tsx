@@ -1,122 +1,88 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useState } from "react";
+import Login from "./pages/Login";
+import RecuperarSenha from "./pages/RecuperarSenha";
+import Painel from "./pages/Painel";
+import Viagens from "./pages/Viagens";
+import AgendaFrota from "./pages/AgendaFrota";
+import CadastroVeiculo from "./pages/CadastroVeiculo";
+import CadastroMotorista from "./pages/CadastroMotorista";
+import CadastroPassageiro from "./pages/CadastroPassageiro";
+import Relatorios from "./pages/Relatorios";
+import AppMotorista from "./pages/AppMotorista";
 
-function App() {
-  const [count, setCount] = useState(0)
+type Tela =
+  | "login"
+  | "recuperar"
+  | "painel"
+  | "viagem"
+  | "agenda"
+  | "veiculo"
+  | "motorista"
+  | "passageiro"
+  | "relatorios"
+  | "appMotorista";
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+// Item do menu lateral -> tela. Itens sem tela ainda não fazem nada.
+const TELAS_DO_MENU: Record<string, Tela> = {
+  Painel: "painel",
+  Viagens: "viagem",
+  "Agenda da frota": "agenda",
+  Veículos: "veiculo",
+  Motoristas: "motorista",
+  Passageiros: "passageiro",
+  Relatórios: "relatorios",
+  "App do motorista": "appMotorista",
+};
 
-      <div className="ticks"></div>
+export default function App() {
+  const [tela, setTela] = useState<Tela>("login");
+  // Quando true, a tela de viagens abre direto no formulário de nova viagem.
+  const [abrirNovaViagem, setAbrirNovaViagem] = useState(false);
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+  function navegar(item: string) {
+    if (item === "Nova viagem") {
+      setAbrirNovaViagem(true);
+      setTela("viagem");
+      return;
+    }
+    setAbrirNovaViagem(false);
+    const destino = TELAS_DO_MENU[item];
+    if (destino) setTela(destino);
+  }
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+  const interna = { onNavegar: navegar, onSair: () => setTela("login") };
+
+  switch (tela) {
+    case "recuperar":
+      return <RecuperarSenha onVoltar={() => setTela("login")} />;
+    case "painel":
+      return <Painel {...interna} />;
+    case "viagem":
+      return (
+        <Viagens
+          key={abrirNovaViagem ? "nova" : "lista"}
+          iniciarCriando={abrirNovaViagem}
+          {...interna}
+        />
+      );
+    case "agenda":
+      return <AgendaFrota {...interna} />;
+    case "veiculo":
+      return <CadastroVeiculo {...interna} />;
+    case "motorista":
+      return <CadastroMotorista {...interna} />;
+    case "passageiro":
+      return <CadastroPassageiro {...interna} />;
+    case "relatorios":
+      return <Relatorios {...interna} />;
+    case "appMotorista":
+      return <AppMotorista {...interna} />;
+    default:
+      return (
+        <Login
+          onEntrar={() => setTela("painel")}
+          onEsqueciSenha={() => setTela("recuperar")}
+        />
+      );
+  }
 }
-
-export default App
