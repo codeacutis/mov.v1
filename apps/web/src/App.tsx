@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { apiRequest, clearAccessToken } from "./services/api";
-import Login from "./pages/Login";
-import RecuperarSenha from "./pages/RecuperarSenha";
-import Painel from "./pages/Painel";
+import Login from "./pages/Login/Login";
+import RecuperarSenha from "./pages/RecuperarSenha/RecuperarSenha";
+import Painel from "./pages/Painel/Painel";
 import Viagens from "./pages/Viagens/Viagens";
 import AgendaFrota from "./pages/AgendaFrota/AgendaFrota";
 import CadastroVeiculo from "./pages/CadastroVeiculo/CadastroVeiculo";

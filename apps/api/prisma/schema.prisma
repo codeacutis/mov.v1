@@ -112,11 +112,16 @@ model Session {
 }
 
 model Driver {
-  id        String   @id @default(uuid(7)) @db.Uuid
-  userId    String   @unique @db.Uuid
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+  id                          String    @id @default(uuid(7)) @db.Uuid
+  userId                      String    @unique @db.Uuid
+  isActive                    Boolean   @default(true)
+  licenseNumber               String?
+  licenseCategory             String?
+  licenseExpiresAt            DateTime? @db.Date
+  hasPassengerTransportCourse Boolean   @default(false)
+  notes                       String?
+  createdAt                   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt                   DateTime  @updatedAt @db.Timestamptz(3)
 
   user  User   @relation(fields: [userId], references: [id])
   trips Trip[]
