@@ -3,7 +3,7 @@
 ## Administração
 
 - **US-01:** Como ADMIN, quero cadastrar pacientes para organizar o transporte.
-- **US-02:** Como ADMIN, quero cadastrar motoristas e veículos para administrar a frota.
+- **US-02:** Como ADMIN, quero cadastrar e consultar veículos, editar seus dados e inativá-los para manter a frota atualizada sem perder o histórico.
 - **US-03:** Como ADMIN, quero criar uma viagem com horários fixos de ida e retorno.
 - **US-04:** Como ADMIN, quero alocar motorista e veículo sem conflitos de agenda.
 - **US-05:** Como ADMIN, quero adicionar pacientes e acompanhantes respeitando a capacidade.
