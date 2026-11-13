@@ -1,8 +1,9 @@
+﻿import "./AppMotorista.css";
 import { useState, type FormEvent } from "react";
-import AppLayout from "../components/AppLayout";
-import Campo from "../components/Campo";
-import Selecao from "../components/Selecao";
-import { mascaraKm } from "../utils/mascaras";
+import AppLayout from "../../components/AppLayout";
+import Campo from "../../components/Campo";
+import Selecao from "../../components/Selecao";
+import { mascaraKm } from "../../utils/mascaras";
 
 interface AppMotoristaProps {
   onNavegar: (item: string) => void;
@@ -180,3 +181,4 @@ export default function AppMotorista({ onNavegar, onSair }: AppMotoristaProps) {
     </AppLayout>
   );
 }
+

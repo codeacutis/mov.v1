@@ -1,0 +1,74 @@
+/* ---------- Telas internas (menu lateral + conteúdo) ---------- */
+.app { min-height: 100vh; display: grid; grid-template-columns: 230px 1fr; }
+
+.menu {
+  background: var(--lateral);
+  color: #e8eef5;
+  padding: 18px 12px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: auto;
+}
+
+.menu .logo { color: #fff; padding: 4px 8px 18px; margin: 0; }
+.menu nav { display: flex; flex-direction: column; gap: 2px; }
+
+.menu__item {
+  text-align: left;
+  border: 0;
+  background: none;
+  color: #c9d6e4;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font: 500 15px Figtree, sans-serif;
+  cursor: pointer;
+}
+
+.menu__item:hover { background: rgba(255, 255, 255, 0.08); }
+.menu__item--ativo { background: var(--acc); color: #12355b; font-weight: 600; }
+.menu__item--sair { margin-top: 18px; }
+
+.app__conteudo { padding: 26px 30px 60px; max-width: 980px; width: 100%; }
+.app__conteudo--total { max-width: none; }
+
+/* ---------- Menu lateral em grupos ---------- */
+.menu__grupo { display: flex; flex-direction: column; gap: 2px; }
+
+.menu__titulo {
+  margin: 16px 12px 4px;
+  font-size: 12px;
+  color: #8fa3b8;
+}
+
+.menu__grupo:first-child .menu__titulo { margin-top: 4px; }
+.menu__item--sair { margin-top: 0; }
+
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; }
+  .menu { position: static; height: auto; padding: 10px; }
+  .menu nav { flex-direction: row; overflow-x: auto; gap: 12px; }
+  .menu__grupo { flex-direction: row; gap: 4px; }
+  .menu__titulo { display: none; }
+  .menu__item { white-space: nowrap; }
+  .menu__item--sair { margin-top: 0; }
+  .app__conteudo { padding: 18px 14px 50px; }
+}
+
+/* ---------- Menu lateral em grupos ---------- */
+.menu__grupo { display: flex; flex-direction: column; gap: 2px; }
+
+.menu__titulo {
+  margin: 16px 12px 4px;
+  font-size: 12px;
+  color: #8fa3b8;
+}
+
+.menu__grupo:first-child .menu__titulo { margin-top: 4px; }
+.menu__item--sair { margin-top: 0; }
+
+@media (max-width: 860px) {
+  .menu nav { gap: 12px; }
+  .menu__grupo { flex-direction: row; gap: 4px; }
+  .menu__titulo { display: none; }
+}

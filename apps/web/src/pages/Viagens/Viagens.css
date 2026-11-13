@@ -1,0 +1,88 @@
+﻿
+/* ---------- Cadastro de viagem ---------- */
+:root {
+  --alerta: #8a5a00;
+  --alerta-bg: #fff0c4;
+  --erro: #b3261e;
+  --erro-bg: #fbe1de;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --alerta: #f2c75c;
+    --alerta-bg: #3a2d0b;
+    --erro: #ff9c93;
+    --erro-bg: #401a17;
+  }
+}
+
+.duas-colunas {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.cartao__titulo { font-size: 18px; margin-bottom: 8px; }
+.texto-suave { color: var(--mut); margin: 0 0 8px; font-size: 14px; }
+.texto-erro { color: var(--erro); }
+
+.aviso--alerta { background: var(--alerta-bg); color: var(--alerta); font-weight: 500; }
+.aviso--erro { background: var(--erro-bg); color: var(--erro); font-weight: 500; }
+
+.medidor {
+  height: 9px;
+  background: var(--bg);
+  border: 1px solid var(--ln);
+  border-radius: 9px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.medidor i { display: block; height: 100%; background: var(--pri); }
+.medidor .medidor__erro { background: var(--erro); }
+
+.lista-passageiros { list-style: none; margin: 0; padding: 0; }
+.lista-passageiros li { border-bottom: 1px solid var(--ln); }
+.lista-passageiros li:last-child { border-bottom: 0; }
+
+.passageiro { padding: 10px 0; align-items: flex-start; cursor: pointer; }
+.passageiro small { display: block; color: var(--mut); font-size: 13px; }
+
+.botao:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (max-width: 960px) {
+  .duas-colunas { grid-template-columns: 1fr; }
+}
+
+/* ---------- Lista de viagens ---------- */
+.abas { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+
+.aba {
+  border: 1px solid var(--ln);
+  background: var(--sf);
+  color: var(--ink);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font: 600 14px Figtree, sans-serif;
+  cursor: pointer;
+}
+
+.aba--ativa { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.filtro {
+  padding: 10px 12px;
+  border: 1px solid var(--ln);
+  border-radius: 8px;
+  background: var(--sf);
+  color: var(--ink);
+  font: 14px Figtree, sans-serif;
+  min-width: 170px;
+}
+
+.filtro:focus-visible, .aba:focus-visible { outline: 3px solid var(--acc); outline-offset: 2px; }
+
+.tabela__sub { display: block; color: var(--mut); font-size: 12px; }
+.status--alerta { background: var(--alerta-bg); color: var(--alerta); }
+.status--erro { background: var(--erro-bg); color: var(--erro); }
+.tabela td .status { white-space: nowrap; }

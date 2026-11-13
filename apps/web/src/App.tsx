@@ -2,13 +2,13 @@ import { useState } from "react";
 import Login from "./pages/Login";
 import RecuperarSenha from "./pages/RecuperarSenha";
 import Painel from "./pages/Painel";
-import Viagens from "./pages/Viagens";
-import AgendaFrota from "./pages/AgendaFrota";
-import CadastroVeiculo from "./pages/CadastroVeiculo";
-import CadastroMotorista from "./pages/CadastroMotorista";
-import CadastroPassageiro from "./pages/CadastroPassageiro";
-import Relatorios from "./pages/Relatorios";
-import AppMotorista from "./pages/AppMotorista";
+import Viagens from "./pages/Viagens/Viagens";
+import AgendaFrota from "./pages/AgendaFrota/AgendaFrota";
+import CadastroVeiculo from "./pages/CadastroVeiculo/CadastroVeiculo";
+import CadastroMotorista from "./pages/CadastroMotorista/CadastroMotorista";
+import CadastroPassageiro from "./pages/CadastroPassageiro/CadastroPassageiro";
+import Relatorios from "./pages/Relatorios/Relatorios";
+import AppMotorista from "./pages/AppMotorista/AppMotorista";
 
 type Tela =
   | "login"

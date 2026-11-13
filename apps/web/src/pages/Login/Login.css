@@ -1,0 +1,72 @@
+/* ---------- Formulário de autenticação ---------- */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 700 22px "Bricolage Grotesque", sans-serif;
+  margin-bottom: 24px;
+}
+
+.logo__icone {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--acc);
+  color: #12355b;
+  font-size: 20px;
+}
+
+.formulario { width: 100%; max-width: 360px; }
+.formulario h2 { font-size: 24px; margin-bottom: 6px; }
+.formulario__subtitulo { color: var(--mut); margin: 0 0 20px; }
+
+.formulario__linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+
+.link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--link);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.link--voltar { text-decoration: none; margin-bottom: 18px; display: inline-block; }
+
+.botao {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--pri);
+  font: 600 15px Figtree, sans-serif;
+  cursor: pointer;
+}
+
+.botao--primario { background: var(--pri); color: var(--pri-ink); }
+.botao--secundario { background: var(--sf); color: var(--ink); border-color: var(--ln); }
+
+.selo {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--ok-bg);
+  color: var(--ok);
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}

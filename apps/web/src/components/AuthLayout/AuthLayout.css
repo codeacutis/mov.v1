@@ -1,0 +1,30 @@
+/* ---------- Telas de autenticação ---------- */
+.auth {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+}
+
+.auth__marca {
+  background: var(--lateral);
+  color: #fff;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.auth__marca h1 { font-size: 40px; line-height: 1.1; max-width: 440px; }
+.auth__marca p { color: #b9c8d8; max-width: 400px; }
+
+.auth__conteudo {
+  display: grid;
+  place-items: center;
+  padding: 30px;
+}
+
+@media (max-width: 860px) {
+  .auth { grid-template-columns: 1fr; }
+  .auth__marca { padding: 28px; }
+  .auth__marca h1 { font-size: 28px; }
+}

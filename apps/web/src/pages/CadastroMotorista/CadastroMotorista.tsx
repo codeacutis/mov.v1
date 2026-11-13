@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from "react";
-import AppLayout from "../components/AppLayout";
-import Campo from "../components/Campo";
-import Selecao from "../components/Selecao";
-import { mascaraCpf, mascaraTelefone } from "../utils/mascaras";
+import AppLayout from "../../components/AppLayout";
+import Campo from "../../components/Campo";
+import Selecao from "../../components/Selecao";
+import { mascaraCpf, mascaraTelefone } from "../../utils/mascaras";
 
 interface CadastroMotoristaProps {
   onNavegar: (item: string) => void;
