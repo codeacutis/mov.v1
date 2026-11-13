@@ -1,6 +1,4 @@
-// Schema do Mov+ — escopo atual: autenticação (User, Session, AuditLog).
-// Demais entidades de docs/architecture/DATA_MODEL.md entram em branches próprias.
-
+// Schema do Mov+ — autenticação e domínios operacionais.
 generator client {
   provider     = "prisma-client"
   output       = "../src/generated/prisma"
@@ -16,6 +14,66 @@ enum Role {
   MOTORISTA
 }
 
+enum VehicleStatus {
+  ACTIVE
+  IN_MAINTENANCE
+  INACTIVE
+}
+
+enum TripStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  INTERRUPTED
+}
+
+enum Priority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ConfirmationStatus {
+  PENDING
+  CONFIRMED
+  DECLINED
+  NO_RESPONSE
+}
+
+enum OutboundStatus {
+  PLANNED
+  BOARDED
+  NO_SHOW
+}
+
+enum ReturnStatus {
+  EXPECTED
+  RETURNED
+  NOT_RETURNING
+  NO_SHOW
+}
+
+enum StopDirection {
+  OUTBOUND
+  RETURN
+}
+
+enum StopType {
+  MUNICIPAL_PICKUP
+  APPOINTMENT
+  MUNICIPAL_RETURN
+}
+
+enum ConfirmationEventType {
+  REQUESTED
+  SENT
+  DELIVERED
+  FAILED
+  RESPONSE
+  RESENT
+}
+
 model User {
   id           String   @id @default(uuid(7)) @db.Uuid
   name         String
@@ -26,14 +84,19 @@ model User {
   createdAt    DateTime @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime @updatedAt @db.Timestamptz(3)
 
-  sessions  Session[]
-  auditLogs AuditLog[]
+  sessions             Session[]
+  auditLogs            AuditLog[]
+  driver               Driver?
+  priorityAssignments  PatientTrip[] @relation("PriorityDefinedBy")
+  tripsCancelled       Trip[]        @relation("TripCancelledBy")
+  tripsInterrupted     Trip[]        @relation("TripInterruptedBy")
+  routesApproved       Trip[]        @relation("RouteApprovedBy")
+  returnAbsenceReports PatientTrip[] @relation("ReturnAbsenceReportedBy")
 
   @@map("users")
 }
 
-/// Sessão no servidor: o JWT carrega apenas o id da sessão. Logout revoga a
-/// sessão, invalidando o token imediatamente.
+/// Sessão no servidor: o JWT carrega apenas o id da sessão.
 model Session {
   id        String    @id @default(uuid(7)) @db.Uuid
   userId    String    @db.Uuid
@@ -46,6 +109,185 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
   @@map("sessions")
+}
+
+model Driver {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  userId    String   @unique @db.Uuid
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  user  User   @relation(fields: [userId], references: [id])
+  trips Trip[]
+
+  @@map("drivers")
+}
+
+model Vehicle {
+  id          String        @id @default(uuid(7)) @db.Uuid
+  plate       String        @unique
+  description String?
+  capacity    Int
+  status      VehicleStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @db.Timestamptz(3)
+
+  trips Trip[]
+
+  @@map("vehicles")
+}
+
+model Patient {
+  id                      String   @id @default(uuid(7)) @db.Uuid
+  name                    String
+  birthDate               DateTime @db.Date
+  phone                   String?
+  susCardNumber           String?
+  address                 String?
+  usesWheelchair          Boolean  @default(false)
+  hasReducedMobility      Boolean  @default(false)
+  needsBoardingAssistance Boolean  @default(false)
+  operationalNotes        String?
+  isActive                Boolean  @default(true)
+  createdAt               DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt               DateTime @updatedAt @db.Timestamptz(3)
+
+  trips PatientTrip[]
+
+  @@map("patients")
+}
+
+model Trip {
+  id                    String     @id @default(uuid(7)) @db.Uuid
+  vehicleId             String     @db.Uuid
+  driverId              String     @db.Uuid
+  municipalPickupPoint  String
+  plannedDepartureAt    DateTime   @db.Timestamptz(3)
+  plannedReturnStartAt  DateTime   @db.Timestamptz(3)
+  actualDepartureAt     DateTime?  @db.Timestamptz(3)
+  actualReturnAt        DateTime?  @db.Timestamptz(3)
+  status                TripStatus @default(SCHEDULED)
+  cancellationReason    String?
+  cancelledAt           DateTime?  @db.Timestamptz(3)
+  cancelledByUserId     String?    @db.Uuid
+  interruptionReason    String?
+  interruptedAt         DateTime?  @db.Timestamptz(3)
+  interruptedByUserId   String?    @db.Uuid
+  interruptionAction    String?
+  routeApprovedAt       DateTime?  @db.Timestamptz(3)
+  routeApprovedByUserId String?    @db.Uuid
+  createdAt             DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime   @updatedAt @db.Timestamptz(3)
+
+  vehicle         Vehicle       @relation(fields: [vehicleId], references: [id])
+  driver          Driver        @relation(fields: [driverId], references: [id])
+  cancelledBy     User?         @relation("TripCancelledBy", fields: [cancelledByUserId], references: [id])
+  interruptedBy   User?         @relation("TripInterruptedBy", fields: [interruptedByUserId], references: [id])
+  routeApprovedBy User?         @relation("RouteApprovedBy", fields: [routeApprovedByUserId], references: [id])
+  patientTrips    PatientTrip[]
+  stops           TripStop[]
+
+  @@index([driverId, plannedDepartureAt])
+  @@index([vehicleId, plannedDepartureAt])
+  @@index([status, plannedDepartureAt])
+  @@map("trips")
+}
+
+model PatientTrip {
+  id                            String             @id @default(uuid(7)) @db.Uuid
+  tripId                        String             @db.Uuid
+  patientId                     String             @db.Uuid
+  appointmentLocationName       String?
+  appointmentAddress            String?
+  appointmentMunicipality       String?
+  appointmentAt                 DateTime?          @db.Timestamptz(3)
+  priority                      Priority
+  priorityJustification         String?
+  priorityDefinedByUserId       String             @db.Uuid
+  priorityDefinedAt             DateTime           @db.Timestamptz(3)
+  confirmationStatus            ConfirmationStatus @default(PENDING)
+  outboundStatus                OutboundStatus     @default(PLANNED)
+  returnStatus                  ReturnStatus       @default(EXPECTED)
+  returnAbsenceReason           String?
+  returnAbsenceReportedAt       DateTime?          @db.Timestamptz(3)
+  returnAbsenceReportedByUserId String?            @db.Uuid
+  outboundStopId                String?            @db.Uuid
+  returnStopId                  String?            @db.Uuid
+  createdAt                     DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt                     DateTime           @updatedAt @db.Timestamptz(3)
+
+  trip                    Trip              @relation(fields: [tripId], references: [id])
+  patient                 Patient           @relation(fields: [patientId], references: [id])
+  priorityDefinedBy       User              @relation("PriorityDefinedBy", fields: [priorityDefinedByUserId], references: [id])
+  returnAbsenceReportedBy User?             @relation("ReturnAbsenceReportedBy", fields: [returnAbsenceReportedByUserId], references: [id])
+  outboundStop            TripStop?         @relation("PatientTripOutboundStop", fields: [outboundStopId, tripId], references: [id, tripId], onDelete: Restrict)
+  returnStop              TripStop?         @relation("PatientTripReturnStop", fields: [returnStopId, tripId], references: [id, tripId], onDelete: Restrict)
+  companions              TripCompanion[]
+  confirmationLogs        ConfirmationLog[]
+
+  @@unique([tripId, patientId])
+  @@index([patientId])
+  @@index([tripId, priority])
+  @@map("patient_trips")
+}
+
+/// Ida e retorno possuem sequências próprias; o mesmo endereço pode ser
+/// cadastrado nas duas direções sem impor uma política de parada compartilhada.
+model TripStop {
+  id               String        @id @default(uuid(7)) @db.Uuid
+  tripId           String        @db.Uuid
+  direction        StopDirection
+  sequence         Int
+  name             String
+  address          String
+  municipality     String
+  latitude         Decimal?      @db.Decimal(9, 6)
+  longitude        Decimal?      @db.Decimal(9, 6)
+  stopType         StopType
+  plannedArrivalAt DateTime?     @db.Timestamptz(3)
+  notes            String?
+  createdAt        DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
+
+  trip                 Trip          @relation(fields: [tripId], references: [id])
+  outboundPatientTrips PatientTrip[] @relation("PatientTripOutboundStop")
+  returnPatientTrips   PatientTrip[] @relation("PatientTripReturnStop")
+
+  @@unique([tripId, direction, sequence])
+  @@unique([id, tripId])
+  @@index([tripId, direction])
+  @@map("trip_stops")
+}
+
+model TripCompanion {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  patientTripId String   @db.Uuid
+  name          String
+  phone         String
+  relationship  String?
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+
+  patientTrip PatientTrip @relation(fields: [patientTripId], references: [id])
+
+  @@index([patientTripId])
+  @@map("trip_companions")
+}
+
+model ConfirmationLog {
+  id                String                @id @default(uuid(7)) @db.Uuid
+  patientTripId     String                @db.Uuid
+  eventType         ConfirmationEventType
+  providerMessageId String?
+  occurredAt        DateTime              @default(now()) @db.Timestamptz(3)
+  metadata          Json?
+
+  patientTrip PatientTrip @relation(fields: [patientTripId], references: [id])
+
+  @@index([patientTripId, occurredAt])
+  @@index([providerMessageId])
+  @@map("confirmation_logs")
 }
 
 model AuditLog {
