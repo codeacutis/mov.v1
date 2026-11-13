@@ -4,6 +4,9 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
+import { DriversModule } from './drivers/drivers.module';
+import { PatientsModule } from './patients/patients.module';
+import { TripsModule } from './trips/trips.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
 import { VehiclesModule } from './vehicles/vehicles.module';
@@ -31,6 +34,9 @@ import { VehiclesModule } from './vehicles/vehicles.module';
     AuditModule,
     UsersModule,
     VehiclesModule,
+    DriversModule,
+    PatientsModule,
+    TripsModule,
     AuthModule,
   ],
   controllers: [AppController],

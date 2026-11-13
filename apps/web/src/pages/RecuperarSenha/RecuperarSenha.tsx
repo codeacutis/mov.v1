@@ -1,19 +1,41 @@
-import { useState, type FormEvent } from "react";
-import AuthLayout from "../../components/AuthLayout";
-import Campo from "../../components/Campo";
-import "./RecuperarSenha.css";
+import { useState, type FormEvent } from 'react';
+import AuthLayout from '../../components/AuthLayout';
+import Campo from '../../components/Campo';
+import { apiRequest, ApiRequestError } from '../../services/api';
+import './RecuperarSenha.css';
 
 interface RecuperarSenhaProps {
   onVoltar: () => void;
 }
 
 export default function RecuperarSenha({ onVoltar }: RecuperarSenhaProps) {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState('');
   const [enviado, setEnviado] = useState(false);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState('');
 
-  function aoEnviar(e: FormEvent<HTMLFormElement>) {
+  async function aoEnviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setEnviado(true);
+    setCarregando(true);
+    setErro('');
+    try {
+      await apiRequest('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      setEnviado(true);
+    } catch (cause) {
+      if (cause instanceof ApiRequestError && cause.status === 404) {
+        setErro('Recuperação de senha ainda não está disponível. Entre em contato com o administrador.');
+      } else if (cause instanceof TypeError) {
+        setErro('Não foi possível acessar a API. Confira se o backend está em execução.');
+      } else {
+        // Por segurança, não revelar se o e-mail existe ou não.
+        setEnviado(true);
+      }
+    } finally {
+      setCarregando(false);
+    }
   }
 
   if (enviado) {
@@ -28,7 +50,7 @@ export default function RecuperarSenha({ onVoltar }: RecuperarSenhaProps) {
             minutos.
           </p>
           <p className="formulario__subtitulo">
-            Não recebeu? Confira a caixa de spam ou{" "}
+            Não recebeu? Confira a caixa de spam ou{' '}
             <button type="button" className="link" onClick={() => setEnviado(false)}>
               tente outro e-mail
             </button>
@@ -54,6 +76,8 @@ export default function RecuperarSenha({ onVoltar }: RecuperarSenhaProps) {
           nova senha.
         </p>
 
+        {erro && <div className="aviso aviso--erro" role="alert">{erro}</div>}
+
         <Campo
           id="email"
           rotulo="E-mail"
@@ -65,8 +89,8 @@ export default function RecuperarSenha({ onVoltar }: RecuperarSenhaProps) {
           required
         />
 
-        <button type="submit" className="botao botao--primario">
-          Enviar link de recuperação
+        <button type="submit" className="botao botao--primario" disabled={carregando}>
+          {carregando ? 'Enviando…' : 'Enviar link de recuperação'}
         </button>
       </form>
     </AuthLayout>

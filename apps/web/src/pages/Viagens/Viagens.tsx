@@ -1,114 +1,119 @@
-﻿import "./Viagens.css";
-import { useState } from "react";
-import AppLayout from "../../components/AppLayout";
-import FormularioViagem from "../../components/FormularioViagem";
+import './Viagens.css';
+import { useCallback, useEffect, useState } from 'react';
+import AppLayout from '../../components/AppLayout';
+import FormularioViagem from '../../components/FormularioViagem';
+import { apiRequest, ApiRequestError } from '../../services/api';
 
 interface ViagensProps {
-  /** Abre direto o formulário de nova viagem. */
   iniciarCriando?: boolean;
   onNavegar: (item: string) => void;
   onSair: () => void;
 }
 
-type Situacao = "andamento" | "agendada" | "aguardando" | "concluida" | "cancelada";
-type Aba = "todas" | "hoje" | "sem-motorista";
+type TripStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'INTERRUPTED';
+type Aba = 'todas' | 'hoje' | 'sem-motorista';
 
-interface Viagem {
+interface Trip {
   id: string;
-  /** Dias em relação a hoje (0 = hoje, 1 = amanhã, -2 = há dois dias...) */
-  offset: number;
-  hora: string;
-  destino: string;
-  unidade: string;
-  motivo: string;
-  veiculo: string | null;
-  motorista: string | null;
-  passageiros: number;
-  situacao: Situacao;
+  plannedDepartureAt: string;
+  municipalPickupPoint: string;
+  status: TripStatus;
+  vehicle: { id: string; plate: string } | null;
+  driver: { id: string; user: { name: string } } | null;
+  _count?: { patientTrips: number };
 }
 
-// Dados de exemplo: no sistema real virão do backend.
-const VIAGENS: Viagem[] = [
-  { id: "V-0241", offset: 0, hora: "05:30", destino: "Campinas", unidade: "Hospital de Clínicas", motivo: "Consulta", veiculo: "VAN-02", motorista: "Carlos Mendes", passageiros: 8, situacao: "andamento" },
-  { id: "V-0242", offset: 0, hora: "06:00", destino: "Varginha", unidade: "Hospital Bom Samaritano", motivo: "Exame", veiculo: "MIC-01", motorista: "Rogério Alves", passageiros: 14, situacao: "andamento" },
-  { id: "V-0243", offset: 0, hora: "13:00", destino: "Belo Horizonte", unidade: "Hospital das Clínicas", motivo: "Procedimento", veiculo: "VAN-01", motorista: "Ana Paula Reis", passageiros: 6, situacao: "agendada" },
-  { id: "V-0244", offset: 1, hora: "05:00", destino: "São Paulo", unidade: "Hospital do Câncer", motivo: "Tratamento", veiculo: "VAN-02", motorista: "Carlos Mendes", passageiros: 5, situacao: "agendada" },
-  { id: "V-0245", offset: 1, hora: "06:30", destino: "Itajubá", unidade: "Santa Casa", motivo: "Consulta", veiculo: null, motorista: null, passageiros: 9, situacao: "aguardando" },
-  { id: "V-0238", offset: -2, hora: "05:30", destino: "Campinas", unidade: "Hospital de Clínicas", motivo: "Consulta", veiculo: "VAN-01", motorista: "Ana Paula Reis", passageiros: 7, situacao: "concluida" },
-  { id: "V-0236", offset: -3, hora: "07:00", destino: "Varginha", unidade: "Hospital Bom Samaritano", motivo: "Exame", veiculo: "MIC-01", motorista: "Rogério Alves", passageiros: 12, situacao: "cancelada" },
-];
+const STATUS_LABEL: Record<TripStatus, string> = {
+  SCHEDULED: 'Agendada',
+  IN_PROGRESS: 'Em andamento',
+  COMPLETED: 'Concluída',
+  CANCELLED: 'Cancelada',
+  INTERRUPTED: 'Interrompida',
+};
 
-const SITUACOES: Record<Situacao, { texto: string; classe: string }> = {
-  andamento: { texto: "Em andamento", classe: "status--ok" },
-  agendada: { texto: "Agendada", classe: "status--info" },
-  aguardando: { texto: "Aguardando motorista", classe: "status--alerta" },
-  concluida: { texto: "Concluída", classe: "status--ok" },
-  cancelada: { texto: "Cancelada", classe: "status--erro" },
+const STATUS_CLASS: Record<TripStatus, string> = {
+  SCHEDULED: 'status--info',
+  IN_PROGRESS: 'status--ok',
+  COMPLETED: 'status--ok',
+  CANCELLED: 'status--erro',
+  INTERRUPTED: 'status--alerta',
 };
 
 const ABAS: { id: Aba; rotulo: string }[] = [
-  { id: "todas", rotulo: "Todas" },
-  { id: "hoje", rotulo: "Hoje" },
-  { id: "sem-motorista", rotulo: "Sem motorista" },
+  { id: 'todas', rotulo: 'Todas' },
+  { id: 'hoje', rotulo: 'Hoje' },
+  { id: 'sem-motorista', rotulo: 'Sem motorista' },
 ];
 
-const DESTINOS = [...new Set(VIAGENS.map((v) => v.destino))];
-const MOTIVOS = [...new Set(VIAGENS.map((v) => v.motivo))];
-
-const dois = (n: number) => String(n).padStart(2, "0");
-
-function dataDaViagem(offset: number): Date {
-  const d = new Date();
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + offset);
+function isToday(iso: string) {
+  const d = new Date(iso);
+  const hoje = new Date();
+  return (
+    d.getFullYear() === hoje.getFullYear() &&
+    d.getMonth() === hoje.getMonth() &&
+    d.getDate() === hoje.getDate()
+  );
 }
 
-function dataISO(offset: number): string {
-  const d = dataDaViagem(offset);
-  return `${d.getFullYear()}-${dois(d.getMonth() + 1)}-${dois(d.getDate())}`;
+function formatDateTime(iso: string) {
+  return new Date(iso).toLocaleString('pt-BR', {
+    day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+  });
 }
 
-function rotuloSaida(v: Viagem): string {
-  if (v.offset === 0) return `Hoje, ${v.hora}`;
-  if (v.offset === 1) return `Amanhã, ${v.hora}`;
-  const d = dataDaViagem(v.offset);
-  return `${dois(d.getDate())}/${dois(d.getMonth() + 1)}, ${v.hora}`;
+function errorMessage(error: unknown): string {
+  if (error instanceof ApiRequestError && error.status === 401)
+    return 'Sua sessão expirou. Entre novamente para continuar.';
+  if (error instanceof TypeError)
+    return 'Não foi possível acessar a API. Confira se o backend está em execução.';
+  return error instanceof Error ? error.message : 'Ocorreu um erro inesperado.';
 }
 
 export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: ViagensProps) {
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [criando, setCriando] = useState(iniciarCriando);
-  const [salvo, setSalvo] = useState(false);
-  const [aba, setAba] = useState<Aba>("todas");
-  const [busca, setBusca] = useState("");
-  const [destino, setDestino] = useState("");
-  const [motivo, setMotivo] = useState("");
-  const [data, setData] = useState("");
+  const [notice, setNotice] = useState('');
+  const [aba, setAba] = useState<Aba>('todas');
+  const [busca, setBusca] = useState('');
+
+  const loadTrips = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setTrips(await apiRequest<Trip[]>('/trips'));
+    } catch (cause) {
+      setError(errorMessage(cause));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void loadTrips(); }, [loadTrips]);
 
   const termo = busca.trim().toLowerCase();
-  const visiveis = VIAGENS.filter((v) => {
-    if (aba === "hoje" && v.offset !== 0) return false;
-    if (aba === "sem-motorista" && v.motorista !== null) return false;
-    if (destino && v.destino !== destino) return false;
-    if (motivo && v.motivo !== motivo) return false;
-    if (data && dataISO(v.offset) !== data) return false;
+  const visiveis = trips.filter((t) => {
+    if (aba === 'hoje' && !isToday(t.plannedDepartureAt)) return false;
+    if (aba === 'sem-motorista' && t.driver !== null) return false;
     if (termo) {
-      const texto = `${v.id} ${v.destino} ${v.unidade} ${v.motorista ?? ""}`.toLowerCase();
+      const texto = `${t.id} ${t.vehicle?.plate ?? ''} ${t.driver?.user.name ?? ''} ${t.municipalPickupPoint}`.toLowerCase();
       if (!texto.includes(termo)) return false;
     }
     return true;
   });
 
-  function aoConcluirFormulario(salvou: boolean) {
-    setCriando(false);
-    setSalvo(salvou);
+  function navegar(item: string) {
+    if (item === 'Viagens') { setCriando(false); setNotice(''); }
+    onNavegar(item);
   }
 
-  // Clicar em "Viagens" no menu também volta para a lista.
-  function navegar(item: string) {
-    if (item === "Viagens") {
-      setCriando(false);
-      setSalvo(false);
+  function aoConcluirFormulario(salvou: boolean) {
+    setCriando(false);
+    if (salvou) {
+      setNotice('Viagem cadastrada com sucesso.');
+      void loadTrips();
     }
-    onNavegar(item);
   }
 
   return (
@@ -123,117 +128,79 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
               <p>Todas as viagens programadas e realizadas</p>
             </div>
             <div className="cabecalho__acoes">
-              <button
-                type="button"
-                className="botao botao--primario"
-                onClick={() => {
-                  setSalvo(false);
-                  setCriando(true);
-                }}
-              >
+              <button type="button" className="botao botao--primario"
+                onClick={() => { setNotice(''); setCriando(true); }}>
                 Nova viagem
               </button>
             </div>
           </header>
 
-          {salvo && (
-            <div className="aviso aviso--ok" role="status">
-              Viagem cadastrada com sucesso.
-            </div>
-          )}
+          {notice && <div className="aviso aviso--ok" role="status">{notice}</div>}
+          {error && <div className="aviso aviso--erro" role="alert">{error}</div>}
 
           <div className="abas" role="group" aria-label="Filtrar por grupo">
             {ABAS.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                className={a.id === aba ? "aba aba--ativa" : "aba"}
+              <button key={a.id} type="button"
+                className={a.id === aba ? 'aba aba--ativa' : 'aba'}
                 aria-pressed={a.id === aba}
-                onClick={() => setAba(a.id)}
-              >
+                onClick={() => setAba(a.id)}>
                 {a.rotulo}
               </button>
             ))}
           </div>
 
           <div className="filtros">
-            <input
-              type="search"
-              className="filtro"
-              aria-label="Buscar por destino ou paciente"
-              placeholder="Buscar por destino ou paciente"
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-            />
-            <select className="filtro" aria-label="Destino" value={destino} onChange={(e) => setDestino(e.target.value)}>
-              <option value="">Todos os destinos</option>
-              {DESTINOS.map((d) => (
-                <option key={d} value={d}>{d}</option>
-              ))}
-            </select>
-            <select className="filtro" aria-label="Motivo" value={motivo} onChange={(e) => setMotivo(e.target.value)}>
-              <option value="">Todos os motivos</option>
-              {MOTIVOS.map((m) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
-            <input
-              type="date"
-              className="filtro"
-              aria-label="Data da viagem"
-              value={data}
-              onChange={(e) => setData(e.target.value)}
-            />
+            <input type="search" className="filtro"
+              aria-label="Buscar por placa, motorista ou local"
+              placeholder="Buscar por placa, motorista ou local"
+              value={busca} onChange={(e) => setBusca(e.target.value)} />
           </div>
 
           <section className="cartao">
-            <div className="tabela-rolagem">
-              <table className="tabela">
-                <thead>
-                  <tr>
-                    <th>Código</th>
-                    <th>Saída</th>
-                    <th>Destino</th>
-                    <th>Motivo</th>
-                    <th>Veículo e motorista</th>
-                    <th>Pass.</th>
-                    <th>Situação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visiveis.map((v) => (
-                    <tr key={v.id}>
-                      <td><strong>{v.id}</strong></td>
-                      <td>{rotuloSaida(v)}</td>
-                      <td>
-                        {v.destino}
-                        <small className="tabela__sub">{v.unidade}</small>
-                      </td>
-                      <td>{v.motivo}</td>
-                      <td>
-                        {v.veiculo ?? "—"}
-                        <small className="tabela__sub">{v.motorista ?? "—"}</small>
-                      </td>
-                      <td>{v.passageiros}</td>
-                      <td>
-                        <span className={`status ${SITUACOES[v.situacao].classe}`}>
-                          {SITUACOES[v.situacao].texto}
-                        </span>
-                      </td>
+            {loading ? (
+              <p role="status">Carregando viagens…</p>
+            ) : (
+              <div className="tabela-rolagem">
+                <table className="tabela">
+                  <thead>
+                    <tr>
+                      <th>Saída</th>
+                      <th>Local de saída</th>
+                      <th>Veículo</th>
+                      <th>Motorista</th>
+                      <th>Situação</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {visiveis.length === 0 && (
-              <p className="texto-suave" style={{ margin: "16px 10px 4px" }}>
-                Nenhuma viagem encontrada com esses filtros.
-              </p>
+                  </thead>
+                  <tbody>
+                    {visiveis.map((t) => (
+                      <tr key={t.id}>
+                        <td>{formatDateTime(t.plannedDepartureAt)}</td>
+                        <td>{t.municipalPickupPoint}</td>
+                        <td>{t.vehicle?.plate ?? '—'}</td>
+                        <td>{t.driver?.user.name ?? <span className="status status--alerta">Sem motorista</span>}</td>
+                        <td>
+                          <span className={`status ${STATUS_CLASS[t.status]}`}>
+                            {STATUS_LABEL[t.status]}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {visiveis.length === 0 && (
+                  <p className="texto-suave" style={{ margin: '16px 10px 4px' }}>
+                    Nenhuma viagem encontrada.
+                  </p>
+                )}
+              </div>
             )}
+            <button type="button" className="botao botao--secundario"
+              onClick={() => void loadTrips()} disabled={loading} style={{ marginTop: 12 }}>
+              Atualizar lista
+            </button>
           </section>
         </>
       )}
     </AppLayout>
   );
 }
-
