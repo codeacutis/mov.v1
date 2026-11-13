@@ -1,0 +1,44 @@
+# Blueprint do Render para DEMONSTRAÇÃO acadêmica (D-019). Somente dados fictícios.
+# Banco: Supabase (PostgreSQL) — não é criado aqui; informe DATABASE_URL no painel.
+services:
+  # API NestJS
+  - type: web
+    name: mov-api
+    runtime: node
+    plan: free
+    rootDir: apps/api
+    # O build aplica as migrations (prisma migrate deploy) e compila.
+    # Por isso DATABASE_URL precisa existir já na fase de build.
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Supabase -> Connect -> "Session pooler" (porta 5432). Nunca versionar.
+      - key: DATABASE_URL
+        sync: false
+      # Gerado pelo Render (mínimo exigido: 32 caracteres).
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SESSION_TTL_SECONDS
+        value: "3600"
+      # URL pública do front, SEM barra final (ex.: https://mov-web.onrender.com).
+      - key: WEB_ORIGIN
+        sync: false
+
+  # Front React (site estático)
+  - type: web
+    name: mov-web
+    runtime: static
+    plan: free
+    rootDir: apps/web
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # URL pública da API, SEM barra final (ex.: https://mov-api.onrender.com).
+      # É gravada no build: ao alterar, faça um novo deploy do front.
+      - key: VITE_API_URL
+        sync: false
