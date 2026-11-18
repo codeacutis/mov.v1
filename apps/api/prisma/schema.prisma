@@ -85,6 +85,7 @@ model User {
   updatedAt    DateTime @updatedAt @db.Timestamptz(3)
 
   sessions             Session[]
+  passwordResetTokens  PasswordResetToken[]
   auditLogs            AuditLog[]
   driver               Driver?
   priorityAssignments  PatientTrip[] @relation("PriorityDefinedBy")
@@ -109,6 +110,24 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
   @@map("sessions")
+}
+
+/// Token de recuperação de senha. Guarda apenas o HASH (SHA-256) do token: o
+/// valor em claro só existe no link enviado ao usuário. Uso único (`usedAt`) e
+/// com expiração.
+model PasswordResetToken {
+  id        String    @id @default(uuid(7)) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  expiresAt DateTime  @db.Timestamptz(3)
+  usedAt    DateTime? @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 model Driver {
