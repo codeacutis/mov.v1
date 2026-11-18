@@ -152,3 +152,11 @@ Não implementar inicialmente otimização avançada do tipo VRP com janelas de 
 - **Auditoria:** `PASSWORD_RESET_REQUESTED` e `PASSWORD_RESET_COMPLETED`, sem token nem senha.
 - **PENDING — entrega do link:** não há provedor de e-mail escolhido. A entrega passa pela abstração `PasswordResetNotifier` (como o WhatsApp). A implementação padrão **não envia nada**; só em desenvolvimento, com `PASSWORD_RESET_DEV_LOG=true`, imprime o link no console. Antes de produção é preciso decidir provedor, custo e política de contato.
 - **Não incluído:** tela no front (`/redefinir-senha`), limite de tentativas por IP, limpeza periódica de tokens expirados.
+
+## D-025 — Autorização fail-closed e rotas do motorista
+**Status: PROPOSED**
+
+- `RolesGuard` passa a **negar por padrão**: rota sem `@Public()`, `@Authenticated()` ou `@Roles(...)` retorna 403. Antes, rota sem `@Roles` era liberada a qualquer usuário autenticado.
+- Rotas exclusivas do MOTORISTA em `/driver/trips` (lista e detalhe das viagens atribuídas), separadas das rotas do ADMIN em `/trips`. Viagem de outro motorista responde 404. As paradas só aparecem após `routeApprovedAt` (RN-07).
+- Matriz de acesso documentada em `docs/security/ACCESS_CONTROL.md` e verificada por testes (varredura de todas as rotas + acesso negado).
+- **Fora do escopo desta revisão:** início/finalização de viagem e registros de ida/volta pelo motorista (ainda não implementados na API).

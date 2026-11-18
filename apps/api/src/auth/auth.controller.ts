@@ -2,7 +2,7 @@ import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { AuthUser } from './auth.types';
 import { AuthService } from './auth.service';
-import { CurrentUser, Public } from './decorators';
+import { Authenticated, CurrentUser, Public } from './decorators';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
 import { PasswordResetService } from './password-reset.service';
@@ -49,6 +49,7 @@ export class AuthController {
     await this.passwordReset.reset(dto.token, dto.password);
   }
 
+  @Authenticated()
   @Post('logout')
   @HttpCode(204)
   async logout(@CurrentUser() user: AuthUser): Promise<void> {
@@ -56,6 +57,7 @@ export class AuthController {
   }
 
   /** Rota protegida mínima: devolve a identidade da sessão atual. */
+  @Authenticated()
   @Get('me')
   me(@CurrentUser() user: AuthUser) {
     return { id: user.id, name: user.name, role: user.role };
