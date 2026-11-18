@@ -140,3 +140,23 @@ Não implementar inicialmente otimização avançada do tipo VRP com janelas de 
 - **Cadastro:** `POST /auth/bootstrap` cria o primeiro ADMIN e só funciona enquanto não houver usuários (serializado por advisory lock). Depois, só ADMIN cadastra usuários (`POST /users`). Não há autocadastro público, para impedir escalada de privilégio.
 - **Senha:** mínimo 10 e máximo 72 caracteres (limite do bcrypt). Política provisória.
 - **Não incluído:** refresh token, recuperação de senha, limite de tentativas de login, limpeza de sessões expiradas, vínculo `Driver` 1:1 (D-003) para contas `MOTORISTA`.
+
+## D-024 — Recuperação de senha
+**Status: PROPOSED**
+
+- **Solicitação:** `POST /auth/forgot-password` responde sempre 202 com a mesma mensagem, exista ou não a conta (sem enumeração de e-mails). Usuário inativo não recebe token.
+- **Token:** 32 bytes aleatórios (base64url). O banco guarda apenas o hash SHA-256 (`PasswordResetToken`); o valor em claro só existe no link entregue. Validade padrão de 30 min (`PASSWORD_RESET_TTL_SECONDS`).
+- **Uso único:** a redefinição consome o token por um `UPDATE` condicional atômico (`usedAt IS NULL AND expiresAt > now`), seguro sob requisições simultâneas. Mensagem de erro única para token inexistente, usado ou expirado.
+- **Invalidação:** nova solicitação invalida tokens pendentes anteriores. Intervalo mínimo de 60 s entre solicitações do mesmo usuário (anti-flood).
+- **Efeitos da redefinição:** troca o hash da senha (bcrypt, mesma política de 10–72 caracteres), **revoga todas as sessões** do usuário e invalida outros tokens pendentes. Senha fraca é recusada sem consumir o token.
+- **Auditoria:** `PASSWORD_RESET_REQUESTED` e `PASSWORD_RESET_COMPLETED`, sem token nem senha.
+- **PENDING — entrega do link:** não há provedor de e-mail escolhido. A entrega passa pela abstração `PasswordResetNotifier` (como o WhatsApp). A implementação padrão **não envia nada**; só em desenvolvimento, com `PASSWORD_RESET_DEV_LOG=true`, imprime o link no console. Antes de produção é preciso decidir provedor, custo e política de contato.
+- **Não incluído:** tela no front (`/redefinir-senha`), limite de tentativas por IP, limpeza periódica de tokens expirados.
+
+## D-025 — Autorização fail-closed e rotas do motorista
+**Status: PROPOSED**
+
+- `RolesGuard` passa a **negar por padrão**: rota sem `@Public()`, `@Authenticated()` ou `@Roles(...)` retorna 403. Antes, rota sem `@Roles` era liberada a qualquer usuário autenticado.
+- Rotas exclusivas do MOTORISTA em `/driver/trips` (lista e detalhe das viagens atribuídas), separadas das rotas do ADMIN em `/trips`. Viagem de outro motorista responde 404. As paradas só aparecem após `routeApprovedAt` (RN-07).
+- Matriz de acesso documentada em `docs/security/ACCESS_CONTROL.md` e verificada por testes (varredura de todas as rotas + acesso negado).
+- **Fora do escopo desta revisão:** início/finalização de viagem e registros de ida/volta pelo motorista (ainda não implementados na API).

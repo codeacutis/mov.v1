@@ -91,4 +91,6 @@ O banco de teste deve ter nome terminando em `_test`; os e2e limpam as tabelas.
 | POST | `/auth/login` | público |
 | POST | `/auth/logout` | autenticado (204) |
 | GET | `/auth/me` | autenticado |
+| POST | `/auth/forgot-password` | público (202, resposta sempre igual) |
+| POST | `/auth/reset-password` | público (204; corpo `{ token, password }`) |
 | POST | `/users` | ADMIN |
