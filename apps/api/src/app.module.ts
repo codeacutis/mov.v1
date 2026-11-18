@@ -6,6 +6,7 @@ import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { DriversModule } from './drivers/drivers.module';
 import { PatientsModule } from './patients/patients.module';
+import { DriverTripsModule } from './driver-trips/driver-trips.module';
 import { TripsModule } from './trips/trips.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UsersModule } from './users/users.module';
@@ -37,6 +38,7 @@ import { VehiclesModule } from './vehicles/vehicles.module';
     DriversModule,
     PatientsModule,
     TripsModule,
+    DriverTripsModule,
     AuthModule,
   ],
   controllers: [AppController],

@@ -140,3 +140,11 @@ Não implementar inicialmente otimização avançada do tipo VRP com janelas de 
 - **Cadastro:** `POST /auth/bootstrap` cria o primeiro ADMIN e só funciona enquanto não houver usuários (serializado por advisory lock). Depois, só ADMIN cadastra usuários (`POST /users`). Não há autocadastro público, para impedir escalada de privilégio.
 - **Senha:** mínimo 10 e máximo 72 caracteres (limite do bcrypt). Política provisória.
 - **Não incluído:** refresh token, recuperação de senha, limite de tentativas de login, limpeza de sessões expiradas, vínculo `Driver` 1:1 (D-003) para contas `MOTORISTA`.
+
+## D-025 — Autorização fail-closed e rotas do motorista
+**Status: PROPOSED**
+
+- `RolesGuard` passa a **negar por padrão**: rota sem `@Public()`, `@Authenticated()` ou `@Roles(...)` retorna 403. Antes, rota sem `@Roles` era liberada a qualquer usuário autenticado.
+- Rotas exclusivas do MOTORISTA em `/driver/trips` (lista e detalhe das viagens atribuídas), separadas das rotas do ADMIN em `/trips`. Viagem de outro motorista responde 404. As paradas só aparecem após `routeApprovedAt` (RN-07).
+- Matriz de acesso documentada em `docs/security/ACCESS_CONTROL.md` e verificada por testes (varredura de todas as rotas + acesso negado).
+- **Fora do escopo desta revisão:** início/finalização de viagem e registros de ida/volta pelo motorista (ainda não implementados na API).
