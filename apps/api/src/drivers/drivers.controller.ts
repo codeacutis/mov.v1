@@ -6,7 +6,9 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
+import { PageQueryDto } from '../common/page-query.dto';
 import { AuthUser } from '../auth/auth.types';
 import { CurrentUser, Roles } from '../auth/decorators';
 import { Role } from '../generated/prisma/client';
@@ -19,8 +21,8 @@ export class DriversController {
   constructor(private readonly drivers: DriversService) {}
 
   @Get()
-  list() {
-    return this.drivers.list();
+  list(@Query() query: PageQueryDto) {
+    return this.drivers.list(query.q, query.page, query.limit);
   }
 
   @Post()

@@ -29,11 +29,27 @@ export class TripsService {
     private readonly audit: AuditService,
   ) {}
 
-  list() {
-    return this.prisma.trip.findMany({
-      select: tripSelect,
-      orderBy: { plannedDepartureAt: 'desc' },
-    });
+  async list(q?: string, page = 1, limit = 20) {
+    const where: Prisma.TripWhereInput = q
+      ? {
+          OR: [
+            { municipalPickupPoint: { contains: q, mode: 'insensitive' } },
+            { vehicle: { plate: { contains: q, mode: 'insensitive' } } },
+            { driver: { user: { name: { contains: q, mode: 'insensitive' } } } },
+          ],
+        }
+      : {};
+    const [data, total] = await Promise.all([
+      this.prisma.trip.findMany({
+        where,
+        select: tripSelect,
+        orderBy: { plannedDepartureAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.trip.count({ where }),
+    ]);
+    return { data, total, page, limit };
   }
 
   async create(actorUserId: string, dto: CreateTripDto) {

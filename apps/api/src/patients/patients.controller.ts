@@ -6,7 +6,9 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
+import { PageQueryDto } from '../common/page-query.dto';
 import { AuthUser } from '../auth/auth.types';
 import { CurrentUser, Roles } from '../auth/decorators';
 import { Role } from '../generated/prisma/client';
@@ -19,8 +21,8 @@ export class PatientsController {
   constructor(private readonly patients: PatientsService) {}
 
   @Get()
-  list() {
-    return this.patients.list();
+  list(@Query() query: PageQueryDto) {
+    return this.patients.list(query.q, query.page, query.limit);
   }
 
   @Post()

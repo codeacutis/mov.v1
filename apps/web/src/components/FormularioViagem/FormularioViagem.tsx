@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import Campo from '../Campo';
 import Selecao from '../Selecao';
-import { apiRequest, ApiRequestError } from '../../services/api';
+import { apiRequest, apiErrorMessage } from '../../services/api';
 import './FormularioViagem.css';
 
 interface FormularioViagemProps {
@@ -48,13 +48,7 @@ const FORM_VAZIO: FormViagem = {
 };
 
 function errorMessage(error: unknown): string {
-  if (error instanceof ApiRequestError && error.status === 401)
-    return 'Sua sessão expirou. Entre novamente para continuar.';
-  if (error instanceof ApiRequestError && error.status === 409)
-    return error.message;
-  if (error instanceof TypeError)
-    return 'Não foi possível acessar a API. Confira se o backend está em execução.';
-  return error instanceof Error ? error.message : 'Ocorreu um erro inesperado.';
+  return apiErrorMessage(error);
 }
 
 function toIso(date: string, time: string): string {

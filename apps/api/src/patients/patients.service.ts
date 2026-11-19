@@ -30,11 +30,27 @@ export class PatientsService {
     private readonly audit: AuditService,
   ) {}
 
-  list() {
-    return this.prisma.patient.findMany({
-      select: patientSelect,
-      orderBy: { name: 'asc' },
-    });
+  async list(q?: string, page = 1, limit = 20) {
+    const where: Prisma.PatientWhereInput = q
+      ? {
+          OR: [
+            { name: { contains: q, mode: 'insensitive' } },
+            { susCardNumber: { contains: q, mode: 'insensitive' } },
+            { phone: { contains: q, mode: 'insensitive' } },
+          ],
+        }
+      : {};
+    const [data, total] = await Promise.all([
+      this.prisma.patient.findMany({
+        where,
+        select: patientSelect,
+        orderBy: { name: 'asc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.patient.count({ where }),
+    ]);
+    return { data, total, page, limit };
   }
 
   async create(actorUserId: string, dto: CreatePatientDto) {

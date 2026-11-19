@@ -1,8 +1,10 @@
 import './Viagens.css';
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import AppLayout from '../../components/AppLayout';
 import FormularioViagem from '../../components/FormularioViagem';
-import { apiRequest, ApiRequestError } from '../../services/api';
+import GerenciarParadas from '../GerenciarParadas/GerenciarParadas';
+import Paginacao from '../../components/Paginacao';
+import { usePaginatedList } from '../../hooks/usePaginatedList';
 
 interface ViagensProps {
   iniciarCriando?: boolean;
@@ -18,8 +20,8 @@ interface Trip {
   plannedDepartureAt: string;
   municipalPickupPoint: string;
   status: TripStatus;
-  vehicle: { id: string; plate: string } | null;
-  driver: { id: string; user: { name: string } } | null;
+  vehicle: { id: string; plate: string };
+  driver: { id: string; user: { name: string } };
   _count?: { patientTrips: number };
 }
 
@@ -61,45 +63,17 @@ function formatDateTime(iso: string) {
   });
 }
 
-function errorMessage(error: unknown): string {
-  if (error instanceof ApiRequestError && error.status === 401)
-    return 'Sua sessão expirou. Entre novamente para continuar.';
-  if (error instanceof TypeError)
-    return 'Não foi possível acessar a API. Confira se o backend está em execução.';
-  return error instanceof Error ? error.message : 'Ocorreu um erro inesperado.';
-}
-
 export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: ViagensProps) {
-  const [trips, setTrips] = useState<Trip[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const { data: trips, loading, error: listError, page, totalPages, q, search, goTo, reload } =
+    usePaginatedList<Trip>('/trips');
   const [criando, setCriando] = useState(iniciarCriando);
+  const [paradaTrip, setParadaTrip] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
   const [aba, setAba] = useState<Aba>('todas');
-  const [busca, setBusca] = useState('');
 
-  const loadTrips = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      setTrips(await apiRequest<Trip[]>('/trips'));
-    } catch (cause) {
-      setError(errorMessage(cause));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { void loadTrips(); }, [loadTrips]);
-
-  const termo = busca.trim().toLowerCase();
   const visiveis = trips.filter((t) => {
     if (aba === 'hoje' && !isToday(t.plannedDepartureAt)) return false;
     if (aba === 'sem-motorista' && t.driver !== null) return false;
-    if (termo) {
-      const texto = `${t.id} ${t.vehicle?.plate ?? ''} ${t.driver?.user.name ?? ''} ${t.municipalPickupPoint}`.toLowerCase();
-      if (!texto.includes(termo)) return false;
-    }
     return true;
   });
 
@@ -112,13 +86,15 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
     setCriando(false);
     if (salvou) {
       setNotice('Viagem cadastrada com sucesso.');
-      void loadTrips();
+      reload();
     }
   }
 
   return (
     <AppLayout ativo="Viagens" onNavegar={navegar} onSair={onSair}>
-      {criando ? (
+      {paradaTrip ? (
+        <GerenciarParadas tripId={paradaTrip} onVoltar={() => setParadaTrip(null)} />
+      ) : criando ? (
         <FormularioViagem onConcluir={aoConcluirFormulario} />
       ) : (
         <>
@@ -136,7 +112,7 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
           </header>
 
           {notice && <div className="aviso aviso--ok" role="status">{notice}</div>}
-          {error && <div className="aviso aviso--erro" role="alert">{error}</div>}
+          {listError && <div className="aviso aviso--erro" role="alert">{listError}</div>}
 
           <div className="abas" role="group" aria-label="Filtrar por grupo">
             {ABAS.map((a) => (
@@ -153,7 +129,7 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
             <input type="search" className="filtro"
               aria-label="Buscar por placa, motorista ou local"
               placeholder="Buscar por placa, motorista ou local"
-              value={busca} onChange={(e) => setBusca(e.target.value)} />
+              value={q} onChange={(e) => search(e.target.value)} />
           </div>
 
           <section className="cartao">
@@ -169,6 +145,7 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
                       <th>Veículo</th>
                       <th>Motorista</th>
                       <th>Situação</th>
+                      <th>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -183,6 +160,11 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
                             {STATUS_LABEL[t.status]}
                           </span>
                         </td>
+                        <td>
+                          <button className="link" type="button" onClick={() => setParadaTrip(t.id)}>
+                            Paradas
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -194,8 +176,9 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
                 )}
               </div>
             )}
+            <Paginacao page={page} totalPages={totalPages} onGoTo={goTo} />
             <button type="button" className="botao botao--secundario"
-              onClick={() => void loadTrips()} disabled={loading} style={{ marginTop: 12 }}>
+              onClick={reload} disabled={loading} style={{ marginTop: 12 }}>
               Atualizar lista
             </button>
           </section>

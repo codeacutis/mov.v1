@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import AppLayout from '../../components/AppLayout';
 import Campo from '../../components/Campo';
 import Selecao from '../../components/Selecao';
-import { apiRequest, ApiRequestError } from '../../services/api';
+import Paginacao from '../../components/Paginacao';
+import { apiRequest, apiErrorMessage } from '../../services/api';
+import { usePaginatedList } from '../../hooks/usePaginatedList';
 import './CadastroVeiculo.css';
 
 interface CadastroVeiculoProps {
@@ -43,43 +45,18 @@ const EMPTY_FORM: VehicleForm = {
 };
 
 function errorMessage(error: unknown): string {
-  if (error instanceof ApiRequestError && error.status === 401) {
-    return 'Sua sessão expirou. Entre novamente para continuar.';
-  }
-  if (error instanceof ApiRequestError && error.status === 403) {
-    return 'Seu usuário não tem permissão para gerenciar veículos.';
-  }
-  if (error instanceof TypeError) {
-    return 'Não foi possível acessar a API. Confira se o backend está em execução.';
-  }
-  return error instanceof Error ? error.message : 'Ocorreu um erro inesperado.';
+  return apiErrorMessage(error);
 }
 
 export default function CadastroVeiculo({ onNavegar, onSair }: CadastroVeiculoProps) {
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: vehicles, loading, error: listError, page, totalPages, q, search, goTo, reload } =
+    usePaginatedList<Vehicle>('/vehicles');
   const [saving, setSaving] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<VehicleForm>(EMPTY_FORM);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-
-  const loadVehicles = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      setVehicles(await apiRequest<Vehicle[]>('/vehicles'));
-    } catch (cause) {
-      setError(errorMessage(cause));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadVehicles();
-  }, [loadVehicles]);
 
   function openCreateForm() {
     setEditingId(null);
@@ -137,7 +114,7 @@ export default function CadastroVeiculo({ onNavegar, onSair }: CadastroVeiculoPr
       setFormOpen(false);
       setEditingId(null);
       setForm(EMPTY_FORM);
-      await loadVehicles();
+      reload();
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -154,7 +131,7 @@ export default function CadastroVeiculo({ onNavegar, onSair }: CadastroVeiculoPr
         method: 'PATCH',
       });
       setNotice(`Veículo ${vehicle.plate} inativado.`);
-      await loadVehicles();
+      reload();
     } catch (cause) {
       setError(errorMessage(cause));
     }
@@ -175,7 +152,7 @@ export default function CadastroVeiculo({ onNavegar, onSair }: CadastroVeiculoPr
       </header>
 
       {notice && <div className="aviso aviso--ok" role="status">{notice}</div>}
-      {error && <div className="aviso aviso--erro" role="alert">{error}</div>}
+      {(error || listError) && <div className="aviso aviso--erro" role="alert">{error || listError}</div>}
 
       {formOpen ? (
         <form className="cartao veiculos__form" onSubmit={saveVehicle}>
@@ -231,10 +208,14 @@ export default function CadastroVeiculo({ onNavegar, onSair }: CadastroVeiculoPr
       ) : (
         <section className="cartao veiculos__lista" aria-labelledby="veiculos-titulo">
           <h2 id="veiculos-titulo" className="cartao__titulo">Frota cadastrada</h2>
+          <div className="filtros">
+            <input type="search" className="filtro" placeholder="Buscar por placa ou descrição"
+              aria-label="Buscar veículos" value={q} onChange={(e) => search(e.target.value)} />
+          </div>
           {loading ? (
             <p role="status">Carregando veículos…</p>
           ) : vehicles.length === 0 ? (
-            <p className="texto-suave">Nenhum veículo cadastrado.</p>
+            <p className="texto-suave">Nenhum veículo encontrado.</p>
           ) : (
             <div className="tabela-rolagem">
               <table className="tabela">
@@ -266,7 +247,8 @@ export default function CadastroVeiculo({ onNavegar, onSair }: CadastroVeiculoPr
               </table>
             </div>
           )}
-          <button type="button" className="botao botao--secundario veiculos__atualizar" onClick={() => void loadVehicles()} disabled={loading}>
+          <Paginacao page={page} totalPages={totalPages} onGoTo={goTo} />
+          <button type="button" className="botao botao--secundario veiculos__atualizar" onClick={reload} disabled={loading}>
             Atualizar lista
           </button>
         </section>

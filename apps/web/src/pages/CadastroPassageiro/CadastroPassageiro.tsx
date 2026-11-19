@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import AppLayout from '../../components/AppLayout';
 import Campo from '../../components/Campo';
-import { apiRequest, ApiRequestError } from '../../services/api';
+import Paginacao from '../../components/Paginacao';
+import { apiRequest, apiErrorMessage } from '../../services/api';
 import { mascaraTelefone } from '../../utils/mascaras';
+import { usePaginatedList } from '../../hooks/usePaginatedList';
 
 interface CadastroPassageiroProps {
   onNavegar: (item: string) => void;
@@ -28,11 +30,25 @@ interface PatientForm {
   birthDate: string;
   phone: string;
   susCardNumber: string;
-  address: string;
+  cep: string;
+  logradouro: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  numero: string;
+  complemento: string;
   usesWheelchair: boolean;
   hasReducedMobility: boolean;
   needsBoardingAssistance: boolean;
   operationalNotes: string;
+}
+
+interface ViaCepResponse {
+  erro?: boolean;
+  logradouro?: string;
+  bairro?: string;
+  localidade?: string;
+  uf?: string;
 }
 
 const EMPTY_FORM: PatientForm = {
@@ -40,21 +56,33 @@ const EMPTY_FORM: PatientForm = {
   birthDate: '',
   phone: '',
   susCardNumber: '',
-  address: '',
+  cep: '',
+  logradouro: '',
+  bairro: '',
+  cidade: '',
+  uf: '',
+  numero: '',
+  complemento: '',
   usesWheelchair: false,
   hasReducedMobility: false,
   needsBoardingAssistance: false,
   operationalNotes: '',
 };
 
+function montarEndereco(f: PatientForm): string {
+  const partes = [
+    f.logradouro,
+    f.numero ? `nº ${f.numero}` : '',
+    f.complemento,
+    f.bairro,
+    f.cidade && f.uf ? `${f.cidade}/${f.uf}` : f.cidade || f.uf,
+    f.cep ? `CEP ${f.cep}` : '',
+  ];
+  return partes.filter(Boolean).join(', ');
+}
+
 function errorMessage(error: unknown): string {
-  if (error instanceof ApiRequestError && error.status === 401)
-    return 'Sua sessão expirou. Entre novamente para continuar.';
-  if (error instanceof ApiRequestError && error.status === 403)
-    return 'Seu usuário não tem permissão para gerenciar pacientes.';
-  if (error instanceof TypeError)
-    return 'Não foi possível acessar a API. Confira se o backend está em execução.';
-  return error instanceof Error ? error.message : 'Ocorreu um erro inesperado.';
+  return apiErrorMessage(error);
 }
 
 function formatDate(iso: string) {
@@ -62,28 +90,17 @@ function formatDate(iso: string) {
 }
 
 export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassageiroProps) {
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: patients, loading, error: listError, page, totalPages, q, search, goTo, reload } =
+    usePaginatedList<Patient>('/patients');
   const [saving, setSaving] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<PatientForm>(EMPTY_FORM);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-
-  const loadPatients = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      setPatients(await apiRequest<Patient[]>('/patients'));
-    } catch (cause) {
-      setError(errorMessage(cause));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { void loadPatients(); }, [loadPatients]);
+  const [cepError, setCepError] = useState('');
+  const [buscandoCep, setBuscandoCep] = useState(false);
+  const cepBuscado = useRef('');
 
   function openCreateForm() {
     setEditingId(null);
@@ -100,12 +117,19 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
       birthDate: p.birthDate.slice(0, 10),
       phone: p.phone ?? '',
       susCardNumber: p.susCardNumber ?? '',
-      address: p.address ?? '',
+      cep: '',
+      logradouro: '',
+      bairro: '',
+      cidade: '',
+      uf: '',
+      numero: '',
+      complemento: p.address ?? '',
       usesWheelchair: p.usesWheelchair,
       hasReducedMobility: p.hasReducedMobility,
       needsBoardingAssistance: p.needsBoardingAssistance,
       operationalNotes: p.operationalNotes ?? '',
     });
+    setCepError('');
     setError('');
     setNotice('');
     setFormOpen(true);
@@ -116,6 +140,37 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
     setEditingId(null);
     setForm(EMPTY_FORM);
     setError('');
+    setCepError('');
+    cepBuscado.current = '';
+  }
+
+  async function buscarCep(cep: string) {
+    const cepLimpo = cep.replace(/\D/g, '');
+    if (cepLimpo.length !== 8 || cepLimpo === cepBuscado.current) return;
+    cepBuscado.current = cepLimpo;
+    setBuscandoCep(true);
+    setCepError('');
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      if (!res.ok) throw new Error();
+      const data: ViaCepResponse = await res.json();
+      if (data.erro) {
+        setCepError('CEP não encontrado. Verifique e tente novamente.');
+        setForm((f) => ({ ...f, logradouro: '', bairro: '', cidade: '', uf: '' }));
+      } else {
+        setForm((f) => ({
+          ...f,
+          logradouro: data.logradouro ?? '',
+          bairro: data.bairro ?? '',
+          cidade: data.localidade ?? '',
+          uf: data.uf ?? '',
+        }));
+      }
+    } catch {
+      setCepError('Serviço de CEP indisponível. Preencha o endereço manualmente.');
+    } finally {
+      setBuscandoCep(false);
+    }
   }
 
   async function savePatient(event: FormEvent<HTMLFormElement>) {
@@ -123,12 +178,13 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
     setSaving(true);
     setError('');
     setNotice('');
+    const enderecoMontado = montarEndereco(form);
     const payload = {
       name: form.name.trim(),
       birthDate: form.birthDate,
       phone: form.phone.trim() || undefined,
       susCardNumber: form.susCardNumber.trim() || undefined,
-      address: form.address.trim() || undefined,
+      address: enderecoMontado || undefined,
       usesWheelchair: form.usesWheelchair,
       hasReducedMobility: form.hasReducedMobility,
       needsBoardingAssistance: form.needsBoardingAssistance,
@@ -145,7 +201,7 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
       setFormOpen(false);
       setEditingId(null);
       setForm(EMPTY_FORM);
-      await loadPatients();
+      reload();
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -160,7 +216,7 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
     try {
       await apiRequest<Patient>(`/patients/${p.id}/inactivate`, { method: 'PATCH' });
       setNotice(`Paciente ${p.name} inativado.`);
-      await loadPatients();
+      reload();
     } catch (cause) {
       setError(errorMessage(cause));
     }
@@ -181,7 +237,7 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
       </header>
 
       {notice && <div className="aviso aviso--ok" role="status">{notice}</div>}
-      {error && <div className="aviso aviso--erro" role="alert">{error}</div>}
+      {(error || listError) && <div className="aviso aviso--erro" role="alert">{error || listError}</div>}
 
       {formOpen ? (
         <form className="cartao" onSubmit={savePatient}>
@@ -199,8 +255,30 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
               <Campo id="sus" rotulo="Cartão SUS" inputMode="numeric"
                 placeholder="000 0000 0000 0000" value={form.susCardNumber}
                 onChange={(e) => setForm({ ...form, susCardNumber: e.target.value })} />
-              <Campo id="endereco" rotulo="Endereço" value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              <Campo id="cep" rotulo="CEP" inputMode="numeric" placeholder="00000-000"
+                value={form.cep} maxLength={9}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2');
+                  setCepError('');
+                  cepBuscado.current = '';
+                  setForm({ ...form, cep: v });
+                }}
+                onBlur={(e) => void buscarCep(e.target.value)}
+                adorno={buscandoCep ? <span className="campo__adorno">⏳</span> : undefined}
+              />
+              {cepError && <p className="campo__erro" role="alert">{cepError}</p>}
+              <Campo id="logradouro" rotulo="Logradouro" value={form.logradouro}
+                onChange={(e) => setForm({ ...form, logradouro: e.target.value })} />
+              <Campo id="numero" rotulo="Número" value={form.numero}
+                onChange={(e) => setForm({ ...form, numero: e.target.value })} />
+              <Campo id="complemento" rotulo="Complemento" value={form.complemento}
+                onChange={(e) => setForm({ ...form, complemento: e.target.value })} />
+              <Campo id="bairro" rotulo="Bairro" value={form.bairro}
+                onChange={(e) => setForm({ ...form, bairro: e.target.value })} />
+              <Campo id="cidade" rotulo="Cidade" value={form.cidade}
+                onChange={(e) => setForm({ ...form, cidade: e.target.value })} />
+              <Campo id="uf" rotulo="UF" value={form.uf} maxLength={2}
+                onChange={(e) => setForm({ ...form, uf: e.target.value.toUpperCase() })} />
             </div>
           </fieldset>
           <fieldset className="secao">
@@ -250,10 +328,14 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
       ) : (
         <section className="cartao">
           <h2 className="cartao__titulo">Pacientes cadastrados</h2>
+          <div className="filtros">
+            <input type="search" className="filtro" placeholder="Buscar por nome, telefone ou cartão SUS"
+              aria-label="Buscar pacientes" value={q} onChange={(e) => search(e.target.value)} />
+          </div>
           {loading ? (
             <p role="status">Carregando pacientes…</p>
           ) : patients.length === 0 ? (
-            <p className="texto-suave">Nenhum paciente cadastrado.</p>
+            <p className="texto-suave">Nenhum paciente encontrado.</p>
           ) : (
             <div className="tabela-rolagem">
               <table className="tabela">
@@ -285,7 +367,8 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
               </table>
             </div>
           )}
-          <button type="button" className="botao botao--secundario" onClick={() => void loadPatients()} disabled={loading}>
+          <Paginacao page={page} totalPages={totalPages} onGoTo={goTo} />
+          <button type="button" className="botao botao--secundario" onClick={reload} disabled={loading}>
             Atualizar lista
           </button>
         </section>

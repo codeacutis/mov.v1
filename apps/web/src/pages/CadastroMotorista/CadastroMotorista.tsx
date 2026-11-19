@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import AppLayout from '../../components/AppLayout';
 import Campo from '../../components/Campo';
 import Selecao from '../../components/Selecao';
-import { apiRequest, ApiRequestError } from '../../services/api';
+import Paginacao from '../../components/Paginacao';
+import { apiRequest, apiErrorMessage } from '../../services/api';
+import { usePaginatedList } from '../../hooks/usePaginatedList';
 
 interface CadastroMotoristaProps {
   onNavegar: (item: string) => void;
@@ -45,37 +47,17 @@ const EMPTY_FORM: DriverForm = {
 };
 
 function errorMessage(error: unknown): string {
-  if (error instanceof ApiRequestError && error.status === 401)
-    return 'Sua sessão expirou. Entre novamente para continuar.';
-  if (error instanceof ApiRequestError && error.status === 403)
-    return 'Seu usuário não tem permissão para gerenciar motoristas.';
-  if (error instanceof TypeError)
-    return 'Não foi possível acessar a API. Confira se o backend está em execução.';
-  return error instanceof Error ? error.message : 'Ocorreu um erro inesperado.';
+  return apiErrorMessage(error);
 }
 
 export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoristaProps) {
-  const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: drivers, loading, error: listError, page, totalPages, q, search, goTo, reload } =
+    usePaginatedList<Driver>('/drivers');
   const [saving, setSaving] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<DriverForm>(EMPTY_FORM);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-
-  const loadDrivers = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      setDrivers(await apiRequest<Driver[]>('/drivers'));
-    } catch (cause) {
-      setError(errorMessage(cause));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { void loadDrivers(); }, [loadDrivers]);
 
   function openForm() {
     setForm(EMPTY_FORM);
@@ -110,7 +92,7 @@ export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoris
       setNotice('Motorista cadastrado.');
       setFormOpen(false);
       setForm(EMPTY_FORM);
-      await loadDrivers();
+      reload();
     } catch (cause) {
       setError(errorMessage(cause));
     } finally {
@@ -125,7 +107,7 @@ export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoris
     try {
       await apiRequest<Driver>(`/drivers/${driver.id}/inactivate`, { method: 'PATCH' });
       setNotice(`Motorista ${driver.user.name} inativado.`);
-      await loadDrivers();
+      reload();
     } catch (cause) {
       setError(errorMessage(cause));
     }
@@ -146,7 +128,7 @@ export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoris
       </header>
 
       {notice && <div className="aviso aviso--ok" role="status">{notice}</div>}
-      {error && <div className="aviso aviso--erro" role="alert">{error}</div>}
+      {(error || listError) && <div className="aviso aviso--erro" role="alert">{error || listError}</div>}
 
       {formOpen ? (
         <form className="cartao" onSubmit={saveDriver}>
@@ -204,10 +186,14 @@ export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoris
       ) : (
         <section className="cartao">
           <h2 className="cartao__titulo">Motoristas cadastrados</h2>
+          <div className="filtros">
+            <input type="search" className="filtro" placeholder="Buscar por nome, e-mail ou CNH"
+              aria-label="Buscar motoristas" value={q} onChange={(e) => search(e.target.value)} />
+          </div>
           {loading ? (
             <p role="status">Carregando motoristas…</p>
           ) : drivers.length === 0 ? (
-            <p className="texto-suave">Nenhum motorista cadastrado.</p>
+            <p className="texto-suave">Nenhum motorista encontrado.</p>
           ) : (
             <div className="tabela-rolagem">
               <table className="tabela">
@@ -237,7 +223,8 @@ export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoris
               </table>
             </div>
           )}
-          <button type="button" className="botao botao--secundario" onClick={() => void loadDrivers()} disabled={loading}>
+          <Paginacao page={page} totalPages={totalPages} onGoTo={goTo} />
+          <button type="button" className="botao botao--secundario" onClick={reload} disabled={loading}>
             Atualizar lista
           </button>
         </section>
