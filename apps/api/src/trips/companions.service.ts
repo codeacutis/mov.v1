@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 export class CreateCompanionDto {
@@ -65,26 +66,34 @@ export class CompanionsService {
   }
 
   async create(patientTripId: string, dto: CreateCompanionDto) {
-    const patientTrip = await this.findPatientTripOrThrow(patientTripId);
-    await this.assertCapacity(patientTrip.tripId, 1);
+    return this.prisma.$transaction(async (tx) => {
+      const patientTrip = await this.findPatientTripOrThrow(patientTripId, tx);
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${patientTrip.tripId}, 0))`;
+      await this.assertCapacity(patientTrip.tripId, 1, tx);
 
-    return this.prisma.tripCompanion.create({
-      data: {
-        patientTripId,
-        name: dto.name.trim(),
-        phone: dto.phone.trim(),
-        relationship: dto.relationship?.trim() || null,
-      },
-      select: companionSelect,
+      return tx.tripCompanion.create({
+        data: {
+          patientTripId,
+          name: dto.name.trim(),
+          phone: dto.phone.trim(),
+          relationship: dto.relationship?.trim() || null,
+        },
+        select: companionSelect,
+      });
     });
   }
 
-  async update(patientTripId: string, companionId: string, dto: UpdateCompanionDto) {
+  async update(
+    patientTripId: string,
+    companionId: string,
+    dto: UpdateCompanionDto,
+  ) {
     await this.findCompanionOrThrow(patientTripId, companionId);
     const data: Record<string, unknown> = {};
     if (dto.name !== undefined) data.name = dto.name.trim();
     if (dto.phone !== undefined) data.phone = dto.phone.trim();
-    if (dto.relationship !== undefined) data.relationship = dto.relationship?.trim() || null;
+    if (dto.relationship !== undefined)
+      data.relationship = dto.relationship?.trim() || null;
 
     return this.prisma.tripCompanion.update({
       where: { id: companionId },
@@ -100,8 +109,11 @@ export class CompanionsService {
 
   // ── helpers ──────────────────────────────────────────────────────────────
 
-  private async findPatientTripOrThrow(patientTripId: string) {
-    const pt = await this.prisma.patientTrip.findUnique({
+  private async findPatientTripOrThrow(
+    patientTripId: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const pt = await client.patientTrip.findUnique({
       where: { id: patientTripId },
       select: { id: true, tripId: true },
     });
@@ -109,7 +121,10 @@ export class CompanionsService {
     return pt;
   }
 
-  private async findCompanionOrThrow(patientTripId: string, companionId: string) {
+  private async findCompanionOrThrow(
+    patientTripId: string,
+    companionId: string,
+  ) {
     const c = await this.prisma.tripCompanion.findUnique({
       where: { id: companionId },
       select: { id: true, patientTripId: true },
@@ -124,8 +139,12 @@ export class CompanionsService {
    * Verifica se adicionar `adding` ocupantes ainda respeita a capacidade do veículo.
    * Ocupação = nº de patientTrips + nº total de companions na viagem.
    */
-  private async assertCapacity(tripId: string, adding: number) {
-    const trip = await this.prisma.trip.findUnique({
+  private async assertCapacity(
+    tripId: string,
+    adding: number,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const trip = await client.trip.findUnique({
       where: { id: tripId },
       select: {
         vehicle: { select: { capacity: true } },
