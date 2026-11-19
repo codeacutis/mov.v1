@@ -69,6 +69,18 @@ Serviços de geocodificação/rota não estão definidos. Não acoplar regra de 
 
 Vercel + Render + Supabase são opções propostas para demonstração acadêmica, não uma decisão de produção. Confirmar limites e políticas atuais. Não utilizar dados reais de saúde em ambiente gratuito sem avaliação formal.
 
+## 8.1 Integração contínua
+
+O workflow `.github/workflows/ci.yml` executa em pull requests e pushes para `main` ou `master`. Ele instala dependências com `npm ci`, executa lint, testes unitários, testes e2e da API com PostgreSQL descartável e builds da API e do frontend. O job usa apenas dados fictícios e um banco criado no runner.
+
+Para habilitar o pipeline, envie o repositório ao GitHub com `.github/workflows` versionado. Em **Settings > Branches**, crie uma regra para exigir os status `API - lint, testes e build` e `Web - lint e build` antes do merge. O GitHub Actions executa o job em Linux, então a verificação usa os finais de linha normalizados pelo checkout.
+
+## 8.2 Deploy com Render
+
+O arquivo `render.yaml` descreve a API e o site estático. No Render, crie um Blueprint apontando para o repositório e informe `DATABASE_URL` e `WEB_ORIGIN` da API. Informe `VITE_API_URL` do frontend com a URL pública da API. O build da API aplica as migrations antes de compilar, então o banco deve estar acessível durante o deploy.
+
+Nunca coloque `DATABASE_URL`, `JWT_SECRET`, tokens do WhatsApp ou outras credenciais em commits, variáveis `VITE_*` que devam ser secretas ou logs do pipeline. `VITE_API_URL` é configuração pública do frontend.
+
 ## 9. Comandos reais da API (`apps/api`)
 
 ```bash
