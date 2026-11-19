@@ -85,6 +85,7 @@ export class DriverTripsService {
     if (!trip) throw new NotFoundException('Viagem não encontrada');
 
     // RN-07: o motorista consulta a rota APROVADA; antes disso não há paradas.
-    return trip.routeApprovedAt ? trip : { ...trip, stops: [] };
+    if (!trip.routeApprovedAt) return { ...trip, stops: [] };
+    return { ...trip, stops: [...trip.stops].sort((a, b) => a.direction === b.direction ? (a.direction === 'RETURN' ? b.sequence - a.sequence : a.sequence - b.sequence) : (a.direction === 'OUTBOUND' ? -1 : 1)) };
   }
 }

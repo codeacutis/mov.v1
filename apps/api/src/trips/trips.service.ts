@@ -43,7 +43,9 @@ export class TripsService {
           OR: [
             { municipalPickupPoint: { contains: q, mode: 'insensitive' } },
             { vehicle: { plate: { contains: q, mode: 'insensitive' } } },
-            { driver: { user: { name: { contains: q, mode: 'insensitive' } } } },
+            {
+              driver: { user: { name: { contains: q, mode: 'insensitive' } } },
+            },
           ],
         }
       : {};
@@ -61,20 +63,29 @@ export class TripsService {
   }
 
   async get(id: string) {
-    const trip = await this.prisma.trip.findUnique({ where: { id }, select: tripSelect });
+    const trip = await this.prisma.trip.findUnique({
+      where: { id },
+      select: tripSelect,
+    });
     if (!trip) throw new NotFoundException('Viagem não encontrada');
     return trip;
   }
 
   async create(actorUserId: string, dto: CreateTripDto) {
     return this.prisma.$transaction(async (tx) => {
-      const vehicle = await tx.vehicle.findUnique({ where: { id: dto.vehicleId } });
+      const vehicle = await tx.vehicle.findUnique({
+        where: { id: dto.vehicleId },
+      });
       if (!vehicle) throw new NotFoundException('Veículo não encontrado');
       if (vehicle.status !== VehicleStatus.ACTIVE) {
-        throw new ConflictException('Veículo inativo ou em manutenção não pode ser alocado');
+        throw new ConflictException(
+          'Veículo inativo ou em manutenção não pode ser alocado',
+        );
       }
 
-      const driver = await tx.driver.findUnique({ where: { id: dto.driverId } });
+      const driver = await tx.driver.findUnique({
+        where: { id: dto.driverId },
+      });
       if (!driver) throw new NotFoundException('Motorista não encontrado');
       if (!driver.isActive) throw new ConflictException('Motorista inativo');
 
@@ -87,8 +98,18 @@ export class TripsService {
         );
       }
 
-      await this.assertNoVehicleConflict(tx, dto.vehicleId, departure, returnStart);
-      await this.assertNoDriverConflict(tx, dto.driverId, departure, returnStart);
+      await this.assertNoVehicleConflict(
+        tx,
+        dto.vehicleId,
+        departure,
+        returnStart,
+      );
+      await this.assertNoDriverConflict(
+        tx,
+        dto.driverId,
+        departure,
+        returnStart,
+      );
 
       const trip = await tx.trip.create({
         data: {
@@ -143,23 +164,53 @@ export class TripsService {
       }
 
       if (dto.vehicleId && dto.vehicleId !== trip.vehicleId) {
-        const vehicle = await tx.vehicle.findUnique({ where: { id: dto.vehicleId } });
+        const vehicle = await tx.vehicle.findUnique({
+          where: { id: dto.vehicleId },
+        });
         if (!vehicle) throw new NotFoundException('Veículo não encontrado');
         if (vehicle.status !== VehicleStatus.ACTIVE) {
-          throw new ConflictException('Veículo inativo ou em manutenção não pode ser alocado');
+          throw new ConflictException(
+            'Veículo inativo ou em manutenção não pode ser alocado',
+          );
         }
-        await this.assertNoVehicleConflict(tx, dto.vehicleId, departure, returnStart, id);
+        await this.assertNoVehicleConflict(
+          tx,
+          dto.vehicleId,
+          departure,
+          returnStart,
+          id,
+        );
       } else if (dto.plannedDepartureAt || dto.plannedReturnStartAt) {
-        await this.assertNoVehicleConflict(tx, trip.vehicleId, departure, returnStart, id);
+        await this.assertNoVehicleConflict(
+          tx,
+          trip.vehicleId,
+          departure,
+          returnStart,
+          id,
+        );
       }
 
       if (dto.driverId && dto.driverId !== trip.driverId) {
-        const driver = await tx.driver.findUnique({ where: { id: dto.driverId } });
+        const driver = await tx.driver.findUnique({
+          where: { id: dto.driverId },
+        });
         if (!driver) throw new NotFoundException('Motorista não encontrado');
         if (!driver.isActive) throw new ConflictException('Motorista inativo');
-        await this.assertNoDriverConflict(tx, dto.driverId, departure, returnStart, id);
+        await this.assertNoDriverConflict(
+          tx,
+          dto.driverId,
+          departure,
+          returnStart,
+          id,
+        );
       } else if (dto.plannedDepartureAt || dto.plannedReturnStartAt) {
-        await this.assertNoDriverConflict(tx, trip.driverId, departure, returnStart, id);
+        await this.assertNoDriverConflict(
+          tx,
+          trip.driverId,
+          departure,
+          returnStart,
+          id,
+        );
       }
 
       const before = {
@@ -175,7 +226,9 @@ export class TripsService {
         data: {
           ...(dto.vehicleId && { vehicleId: dto.vehicleId }),
           ...(dto.driverId && { driverId: dto.driverId }),
-          ...(dto.municipalPickupPoint && { municipalPickupPoint: dto.municipalPickupPoint }),
+          ...(dto.municipalPickupPoint && {
+            municipalPickupPoint: dto.municipalPickupPoint,
+          }),
           plannedDepartureAt: departure,
           plannedReturnStartAt: returnStart,
         },
@@ -200,7 +253,9 @@ export class TripsService {
       const trip = await tx.trip.findUnique({ where: { id } });
       if (!trip) throw new NotFoundException('Viagem não encontrada');
       if (trip.status !== TripStatus.SCHEDULED) {
-        throw new ConflictException('Apenas viagens agendadas podem ser iniciadas');
+        throw new ConflictException(
+          'Apenas viagens agendadas podem ser iniciadas',
+        );
       }
 
       const now = new Date();
@@ -228,7 +283,9 @@ export class TripsService {
       const trip = await tx.trip.findUnique({ where: { id } });
       if (!trip) throw new NotFoundException('Viagem não encontrada');
       if (trip.status !== TripStatus.IN_PROGRESS) {
-        throw new ConflictException('Apenas viagens em andamento podem ser encerradas');
+        throw new ConflictException(
+          'Apenas viagens em andamento podem ser encerradas',
+        );
       }
 
       const now = new Date();
@@ -256,7 +313,9 @@ export class TripsService {
       const trip = await tx.trip.findUnique({ where: { id } });
       if (!trip) throw new NotFoundException('Viagem não encontrada');
       if (trip.status !== TripStatus.SCHEDULED) {
-        throw new ConflictException('Apenas viagens agendadas podem ser canceladas');
+        throw new ConflictException(
+          'Apenas viagens agendadas podem ser canceladas',
+        );
       }
 
       const updated = await tx.trip.update({
@@ -288,7 +347,9 @@ export class TripsService {
       const trip = await tx.trip.findUnique({ where: { id } });
       if (!trip) throw new NotFoundException('Viagem não encontrada');
       if (trip.status !== TripStatus.IN_PROGRESS) {
-        throw new ConflictException('Apenas viagens em andamento podem ser interrompidas');
+        throw new ConflictException(
+          'Apenas viagens em andamento podem ser interrompidas',
+        );
       }
 
       const now = new Date();
@@ -325,11 +386,18 @@ export class TripsService {
         select: { id: true, status: true, _count: { select: { stops: true } } },
       });
       if (!trip) throw new NotFoundException('Viagem não encontrada');
-      if (trip.status === TripStatus.CANCELLED || trip.status === TripStatus.INTERRUPTED) {
-        throw new ConflictException('Não é possível aprovar rota de viagem cancelada ou interrompida');
+      if (
+        trip.status === TripStatus.CANCELLED ||
+        trip.status === TripStatus.INTERRUPTED
+      ) {
+        throw new ConflictException(
+          'Não é possível aprovar rota de viagem cancelada ou interrompida',
+        );
       }
       if (trip._count.stops === 0) {
-        throw new BadRequestException('A viagem não possui paradas cadastradas');
+        throw new BadRequestException(
+          'A viagem não possui paradas cadastradas',
+        );
       }
 
       const now = new Date();
@@ -351,6 +419,31 @@ export class TripsService {
     });
   }
 
+  async addObservation(actorUserId: string, id: string, description: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const trip = await tx.trip.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+      if (!trip) throw new NotFoundException('Viagem não encontrada');
+      const observation = await tx.tripObservation.create({
+        data: {
+          tripId: id,
+          authorId: actorUserId,
+          description: description.trim(),
+        },
+      });
+      await this.audit.record(tx, {
+        actorUserId,
+        action: 'TRIP_OBSERVATION_CREATED',
+        entityType: 'Trip',
+        entityId: id,
+        changes: { observationId: observation.id },
+      });
+      return observation;
+    });
+  }
+
   // ── helpers ──────────────────────────────────────────────────────────────
 
   private async assertNoVehicleConflict(
@@ -369,7 +462,8 @@ export class TripsService {
         ...(excludeId && { id: { not: excludeId } }),
       },
     });
-    if (count > 0) throw new ConflictException('Veículo já possui viagem neste período');
+    if (count > 0)
+      throw new ConflictException('Veículo já possui viagem neste período');
   }
 
   private async assertNoDriverConflict(
@@ -388,6 +482,7 @@ export class TripsService {
         ...(excludeId && { id: { not: excludeId } }),
       },
     });
-    if (count > 0) throw new ConflictException('Motorista já possui viagem neste período');
+    if (count > 0)
+      throw new ConflictException('Motorista já possui viagem neste período');
   }
 }

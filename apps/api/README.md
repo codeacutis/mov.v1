@@ -97,3 +97,17 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## Participações em viagens
+
+As rotas abaixo exigem o papel `ADMIN`.
+
+| Rota | Operação |
+| --- | --- |
+| `GET /trips/:tripId/patient-trips` | Lista participações e prioridades. |
+| `POST /trips/:tripId/patient-trips` | Inclui paciente ativo em viagem agendada, com dados da consulta, prioridade e justificativa. Cada paciente só pode aparecer uma vez na viagem. Pacientes e acompanhantes ocupam vagas. |
+| `PATCH /patient-trips/:id` | Atualiza dados planejados antes do início. Para definir prioridade, envie `priority` e `priorityJustification`. |
+| `PATCH /patient-trips/:id/outbound-status` | Altera somente o estado de ida da participação indicada. |
+| `PATCH /patient-trips/:id/return-status` | Altera somente o estado de retorno da participação indicada. |
+
+As rotas de estado recebem `status`. No retorno, envie também `reason` para `NOT_RETURNING` (aviso prévio) ou `NO_SHOW` (ausência constatada). O backend registra autor e horário. A participação continua na viagem e a ida permanece independente. A falta de confirmação não aciona alteração automática. O registro administrativo de ausência não define quando o motorista pode seguir viagem.

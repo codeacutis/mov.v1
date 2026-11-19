@@ -24,6 +24,12 @@ class CancelTripDto {
   @MaxLength(500)
   reason!: string;
 }
+class TripObservationDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(1000)
+  description!: string;
+}
 
 @Controller('trips')
 @Roles(Role.ADMIN)
@@ -97,5 +103,14 @@ export class TripsController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
     return this.trips.approveRoute(actor.id, id);
+  }
+
+  @Post(':id/observations')
+  addObservation(
+    @CurrentUser() actor: AuthUser,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: TripObservationDto,
+  ) {
+    return this.trips.addObservation(actor.id, id, dto.description);
   }
 }

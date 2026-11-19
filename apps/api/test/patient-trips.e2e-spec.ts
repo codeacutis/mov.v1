@@ -155,6 +155,77 @@ describe('Participações de pacientes (e2e)', () => {
     expect(updated.body.returnAbsenceReportedBy).toBeTruthy();
   });
 
+  it('preserva os demais participantes e conta acompanhantes nas vagas', async () => {
+    const path = `/trips/${tripId}/patient-trips`;
+    const first = await request(http)
+      .post(path)
+      .set(auth())
+      .send(participation())
+      .expect(201);
+    await request(http)
+      .post(`/patient-trips/${first.body.id}/companions`)
+      .set(auth())
+      .send({ name: 'Acompanhante Teste', phone: '11900000000' })
+      .expect(201);
+    const patient = await prisma.patient.create({
+      data: { name: 'Segundo Paciente', birthDate: new Date('1980-01-01') },
+    });
+    await request(http)
+      .post(path)
+      .set(auth())
+      .send({ ...participation(), patientId: patient.id })
+      .expect(409);
+    const companion = await prisma.tripCompanion.findFirstOrThrow({
+      where: { patientTripId: first.body.id },
+    });
+    await request(http)
+      .delete(`/patient-trips/${first.body.id}/companions/${companion.id}`)
+      .set(auth())
+      .expect(204);
+    const second = await request(http)
+      .post(path)
+      .set(auth())
+      .send({ ...participation(), patientId: patient.id })
+      .expect(201);
+
+    await request(http)
+      .patch(`/patient-trips/${first.body.id}`)
+      .set(auth())
+      .send({
+        priority: 'LOW',
+        priorityJustification: 'Revisão administrativa',
+      })
+      .expect(200);
+    const statusPath = `/patient-trips/${first.body.id}/return-status`;
+    await request(http)
+      .patch(statusPath)
+      .set(auth())
+      .send({ status: 'NO_SHOW' })
+      .expect(400);
+    await request(http)
+      .patch(statusPath)
+      .set(auth())
+      .send({ status: 'NO_SHOW', reason: 'Paciente ausente no recolhimento' })
+      .expect(200);
+    const result = await request(http).get(path).set(auth()).expect(200);
+    expect(result.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: first.body.id,
+          priority: 'LOW',
+          returnStatus: 'NO_SHOW',
+          returnAbsenceReason: 'Paciente ausente no recolhimento',
+        }),
+        expect.objectContaining({
+          id: second.body.id,
+          priority: 'HIGH',
+          outboundStatus: 'PLANNED',
+          returnStatus: 'EXPECTED',
+        }),
+      ]),
+    );
+  });
+
   it('rejeita prioridade inválida e alteração sem justificativa', async () => {
     await request(http)
       .post(`/trips/${tripId}/patient-trips`)

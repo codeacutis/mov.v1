@@ -58,6 +58,8 @@ Nome obrigatório; data de nascimento em vez de idade; idade calculada. Endereç
 
 **PENDING:** obrigatoriedade de telefone/contato, necessidade de CPF e campos finais do cadastro.
 
+**Confirmado pelo produto:** nome e telefone são obrigatórios para acompanhante. Cada PatientTrip aceita no máximo um acompanhante.
+
 ## D-010 — Acompanhantes
 **Status: CONFIRMED**
 
@@ -110,6 +112,12 @@ Paciente pode utilizar o transporte na ida e não retornar no veículo municipal
 Se não houver comunicação prévia de ausência/não retorno, motorista deve aguardar a chegada/disponibilidade do paciente. Pode utilizar os contatos cadastrados na participação para contatar paciente ou acompanhante e entender a situação. Se houver orientação/situação que indique que não deve aguardar, segue a viagem normalmente, registrando ocorrência.
 
 **PENDING:** definir limite de espera, procedimento para ausência sem contato, quem autoriza seguir e como registrar a orientação. Não implementar timeout arbitrário sem decisão da Secretaria.
+
+**Implementação atual:** o ADMIN pode documentar a ausência constatada como `NO_SHOW`, com motivo obrigatório e identificação do registro. Esse lançamento é distinto do aviso prévio `NOT_RETURNING`. A política operacional de espera e autorização continua pendente.
+
+**Confirmado pelo produto:** sem aviso prévio e sem contato, o motorista registra uma observação da viagem e segue o caminho. O retorno só pode ser utilizado por paciente que tenha embarcado na ida.
+
+**Confirmado pelo produto:** não haverá provedor de mapas. O ADMIN organiza a ordem das paradas, e o retorno é apresentado em ordem inversa à ida. Estabelecimentos podem ser compartilhados entre participações.
 
 ## D-019 — Deploy acadêmico
 **Status: PROPOSED**
