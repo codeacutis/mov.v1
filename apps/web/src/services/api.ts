@@ -11,6 +11,18 @@ export class ApiRequestError extends Error {
   }
 }
 
+export function apiErrorMessage(error: unknown): string {
+  if (error instanceof ApiRequestError) {
+    if (error.status === 401) return 'Sua sessão expirou. Entre novamente para continuar.';
+    if (error.status === 403) return 'Você não tem permissão para realizar esta ação.';
+    if (error.status === 409) return error.message;
+    if (error.status >= 500) return 'Erro interno do servidor. Tente novamente mais tarde.';
+    return error.message;
+  }
+  if (error instanceof TypeError) return 'Não foi possível acessar a API. Confira se o backend está em execução.';
+  return error instanceof Error ? error.message : 'Ocorreu um erro inesperado.';
+}
+
 export function getAccessToken(): string | null {
   return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
 }

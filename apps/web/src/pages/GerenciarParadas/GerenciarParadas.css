@@ -1,0 +1,14 @@
+.paradas__secoes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 700px) { .paradas__secoes { grid-template-columns: 1fr; } }
+
+.paradas__lista { list-style: none; padding: 0; margin: 0; }
+
+.paradas__item { padding: 12px 0; border-bottom: 1px solid var(--ln); }
+.paradas__item:last-child { border-bottom: 0; }
+
+.paradas__item-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.paradas__remover { color: var(--err, #c0392b); margin-left: auto; }
+.paradas__endereco { margin: 4px 0 2px; }
+
+.paradas__pacientes { display: flex; flex-direction: column; gap: 8px; }
+.paradas__pacientes-lista { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }

@@ -1,7 +1,7 @@
 import './AppMotorista.css';
 import { useEffect, useState } from 'react';
 import AppLayout from '../../components/AppLayout';
-import { apiRequest, ApiRequestError } from '../../services/api';
+import { apiRequest, apiErrorMessage } from '../../services/api';
 
 interface AppMotoristaProps {
   onNavegar: (item: string) => void;
@@ -9,6 +9,21 @@ interface AppMotoristaProps {
 }
 
 type TripStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'INTERRUPTED';
+type StopDirection = 'OUTBOUND' | 'RETURN';
+type StopType = 'MUNICIPAL_PICKUP' | 'APPOINTMENT' | 'MUNICIPAL_RETURN';
+
+interface TripStop {
+  id: string;
+  direction: StopDirection;
+  sequence: number;
+  name: string;
+  address: string;
+  municipality: string;
+  stopType: StopType;
+  plannedArrivalAt: string | null;
+  outboundPatientTrips: { id: string; patient: { name: string } }[];
+  returnPatientTrips: { id: string; patient: { name: string } }[];
+}
 
 interface Me {
   id: string;
@@ -22,8 +37,8 @@ interface Trip {
   plannedReturnStartAt: string;
   municipalPickupPoint: string;
   status: TripStatus;
-  vehicle: { plate: string; capacity: number } | null;
-  driver: { id: string; user: { id: string; name: string } } | null;
+  vehicle: { plate: string; capacity: number };
+  driver: { id: string; user: { id: string; name: string } };
   _count?: { patientTrips: number };
 }
 
@@ -50,17 +65,14 @@ function formatTime(iso: string): string {
 }
 
 function errorMessage(error: unknown): string {
-  if (error instanceof ApiRequestError && error.status === 401)
-    return 'Sua sessão expirou. Entre novamente para continuar.';
-  if (error instanceof TypeError)
-    return 'Não foi possível acessar a API. Confira se o backend está em execução.';
-  return error instanceof Error ? error.message : 'Ocorreu um erro inesperado.';
+  return apiErrorMessage(error);
 }
 
 export default function AppMotorista({ onNavegar, onSair }: AppMotoristaProps) {
   const [me, setMe] = useState<Me | null>(null);
   const [tripHoje, setTripHoje] = useState<Trip | null>(null);
   const [proximasViagens, setProximasViagens] = useState<Trip[]>([]);
+  const [stopsHoje, setStopsHoje] = useState<TripStop[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -99,6 +111,11 @@ export default function AppMotorista({ onNavegar, onSair }: AppMotoristaProps) {
 
         setTripHoje(hoje);
         setProximasViagens(proximas);
+
+        if (hoje) {
+          const stops = await apiRequest<TripStop[]>(`/trips/${hoje.id}/stops`).catch(() => []);
+          setStopsHoje(stops);
+        }
       } catch (cause) {
         setError(errorMessage(cause));
       } finally {
@@ -145,6 +162,48 @@ export default function AppMotorista({ onNavegar, onSair }: AppMotoristaProps) {
                 <p className="texto-suave" style={{ marginTop: 8 }}>
                   Início do retorno: {formatTime(tripHoje.plannedReturnStartAt)}
                 </p>
+                {stopsHoje.length > 0 && (
+                  <>
+                    <h3 className="cartao__subtitulo" style={{ marginTop: 14 }}>Roteiro</h3>
+                    {(['OUTBOUND', 'RETURN'] as StopDirection[]).map((dir) => {
+                      const lista = stopsHoje
+                        .filter((s) => s.direction === dir)
+                        .sort((a, b) => a.sequence - b.sequence);
+                      if (lista.length === 0) return null;
+                      return (
+                        <div key={dir} style={{ marginBottom: 10 }}>
+                          <p className="texto-suave" style={{ fontWeight: 600, marginBottom: 4 }}>
+                            {dir === 'OUTBOUND' ? 'Ida' : 'Retorno'}
+                          </p>
+                          <ol className="paradas__lista">
+                            {lista.map((s) => {
+                              const pacientes = dir === 'OUTBOUND'
+                                ? s.outboundPatientTrips
+                                : s.returnPatientTrips;
+                              return (
+                                <li key={s.id} style={{ padding: '6px 0', borderBottom: '1px solid var(--ln)', fontSize: 13 }}>
+                                  <strong>{s.sequence}. {s.name}</strong>
+                                  <br />
+                                  <span className="texto-suave">{s.address}</span>
+                                  {s.plannedArrivalAt && (
+                                    <span className="texto-suave"> · {formatTime(s.plannedArrivalAt)}</span>
+                                  )}
+                                  {pacientes.length > 0 && (
+                                    <ul style={{ margin: '4px 0 0', padding: 0, listStyle: 'none' }}>
+                                      {pacientes.map((pt) => (
+                                        <li key={pt.id} style={{ fontSize: 12 }}>👤 {pt.patient.name}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ol>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
               </section>
             </>
           ) : (

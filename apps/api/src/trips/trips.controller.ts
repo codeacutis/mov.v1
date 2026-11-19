@@ -6,8 +6,10 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { IsString, MaxLength, MinLength } from 'class-validator';
+import { PageQueryDto } from '../common/page-query.dto';
 import { AuthUser } from '../auth/auth.types';
 import { CurrentUser, Roles } from '../auth/decorators';
 import { Role } from '../generated/prisma/client';
@@ -27,8 +29,8 @@ export class TripsController {
   constructor(private readonly trips: TripsService) {}
 
   @Get()
-  list() {
-    return this.trips.list();
+  list(@Query() query: PageQueryDto) {
+    return this.trips.list(query.q, query.page, query.limit);
   }
 
   @Post()

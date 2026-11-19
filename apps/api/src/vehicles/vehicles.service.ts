@@ -17,8 +17,25 @@ export class VehiclesService {
     private readonly audit: AuditService,
   ) {}
 
-  list() {
-    return this.prisma.vehicle.findMany({ orderBy: { plate: 'asc' } });
+  async list(q?: string, page = 1, limit = 20) {
+    const where: Prisma.VehicleWhereInput = q
+      ? {
+          OR: [
+            { plate: { contains: q, mode: 'insensitive' } },
+            { description: { contains: q, mode: 'insensitive' } },
+          ],
+        }
+      : {};
+    const [data, total] = await Promise.all([
+      this.prisma.vehicle.findMany({
+        where,
+        orderBy: { plate: 'asc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.vehicle.count({ where }),
+    ]);
+    return { data, total, page, limit };
   }
 
   async create(actorUserId: string, dto: CreateVehicleDto) {

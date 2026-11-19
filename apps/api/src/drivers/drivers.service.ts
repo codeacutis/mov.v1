@@ -39,11 +39,27 @@ export class DriversService {
     private readonly audit: AuditService,
   ) {}
 
-  list() {
-    return this.prisma.driver.findMany({
-      select: driverSelect,
-      orderBy: { user: { name: 'asc' } },
-    });
+  async list(q?: string, page = 1, limit = 20) {
+    const where: Prisma.DriverWhereInput = q
+      ? {
+          OR: [
+            { user: { name: { contains: q, mode: 'insensitive' } } },
+            { user: { email: { contains: q, mode: 'insensitive' } } },
+            { licenseNumber: { contains: q, mode: 'insensitive' } },
+          ],
+        }
+      : {};
+    const [data, total] = await Promise.all([
+      this.prisma.driver.findMany({
+        where,
+        select: driverSelect,
+        orderBy: { user: { name: 'asc' } },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.driver.count({ where }),
+    ]);
+    return { data, total, page, limit };
   }
 
   async create(actorUserId: string, dto: CreateDriverDto) {
