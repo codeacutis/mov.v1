@@ -81,11 +81,11 @@ export default function AppMotorista({ onNavegar, onSair }: AppMotoristaProps) {
       try {
         const [meData, trips] = await Promise.all([
           apiRequest<Me>('/auth/me'),
-          apiRequest<Trip[]>('/trips'),
+          apiRequest<{ data: Trip[] }>('/trips'),
         ]);
         setMe(meData);
 
-        const minhasViagens = trips.filter(
+        const minhasViagens = trips.data.filter(
           (t) => t.driver?.user.id === meData.id,
         );
 

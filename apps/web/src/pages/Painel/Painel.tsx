@@ -81,11 +81,11 @@ export default function Painel({ onNavegar, onSair }: PainelProps) {
 
   useEffect(() => {
     Promise.all([
-      apiRequest<Trip[]>('/trips').catch(() => [] as Trip[]),
-      apiRequest<Vehicle[]>('/vehicles').catch(() => [] as Vehicle[]),
+      apiRequest<{ data: Trip[] }>('/trips').catch(() => ({ data: [] as Trip[] })),
+      apiRequest<{ data: Vehicle[] }>('/vehicles').catch(() => ({ data: [] as Vehicle[] })),
     ]).then(([t, v]) => {
-      setTrips(t);
-      setVehicles(v);
+      setTrips(t.data);
+      setVehicles(v.data);
       setLoading(false);
     });
   }, []);

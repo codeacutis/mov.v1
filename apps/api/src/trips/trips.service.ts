@@ -1,12 +1,14 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
-import { Prisma, TripStatus } from '../generated/prisma/client';
+import { Prisma, TripStatus, VehicleStatus } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
+import { InterruptTripDto, UpdateTripDto } from './dto/update-trip.dto';
 
 const tripSelect = {
   id: true,
@@ -16,6 +18,12 @@ const tripSelect = {
   actualDepartureAt: true,
   actualReturnAt: true,
   status: true,
+  cancellationReason: true,
+  cancelledAt: true,
+  interruptionReason: true,
+  interruptedAt: true,
+  interruptionAction: true,
+  routeApprovedAt: true,
   createdAt: true,
   vehicle: { select: { id: true, plate: true, capacity: true } },
   driver: { select: { id: true, user: { select: { id: true, name: true } } } },
@@ -52,42 +60,35 @@ export class TripsService {
     return { data, total, page, limit };
   }
 
+  async get(id: string) {
+    const trip = await this.prisma.trip.findUnique({ where: { id }, select: tripSelect });
+    if (!trip) throw new NotFoundException('Viagem não encontrada');
+    return trip;
+  }
+
   async create(actorUserId: string, dto: CreateTripDto) {
     return this.prisma.$transaction(async (tx) => {
       const vehicle = await tx.vehicle.findUnique({ where: { id: dto.vehicleId } });
       if (!vehicle) throw new NotFoundException('Veículo não encontrado');
+      if (vehicle.status !== VehicleStatus.ACTIVE) {
+        throw new ConflictException('Veículo inativo ou em manutenção não pode ser alocado');
+      }
 
       const driver = await tx.driver.findUnique({ where: { id: dto.driverId } });
       if (!driver) throw new NotFoundException('Motorista não encontrado');
+      if (!driver.isActive) throw new ConflictException('Motorista inativo');
 
       const departure = new Date(dto.plannedDepartureAt);
       const returnStart = new Date(dto.plannedReturnStartAt);
 
-      // Verificar conflito de veículo
-      const vehicleConflict = await tx.trip.count({
-        where: {
-          vehicleId: dto.vehicleId,
-          status: { in: [TripStatus.SCHEDULED, TripStatus.IN_PROGRESS] },
-          plannedDepartureAt: { lte: returnStart },
-          plannedReturnStartAt: { gte: departure },
-        },
-      });
-      if (vehicleConflict > 0) {
-        throw new ConflictException('Veículo já possui viagem neste período');
+      if (returnStart <= departure) {
+        throw new BadRequestException(
+          'O horário de início do retorno deve ser posterior à saída',
+        );
       }
 
-      // Verificar conflito de motorista
-      const driverConflict = await tx.trip.count({
-        where: {
-          driverId: dto.driverId,
-          status: { in: [TripStatus.SCHEDULED, TripStatus.IN_PROGRESS] },
-          plannedDepartureAt: { lte: returnStart },
-          plannedReturnStartAt: { gte: departure },
-        },
-      });
-      if (driverConflict > 0) {
-        throw new ConflictException('Motorista já possui viagem neste período');
-      }
+      await this.assertNoVehicleConflict(tx, dto.vehicleId, departure, returnStart);
+      await this.assertNoDriverConflict(tx, dto.driverId, departure, returnStart);
 
       const trip = await tx.trip.create({
         data: {
@@ -109,6 +110,7 @@ export class TripsService {
           vehicleId: dto.vehicleId,
           driverId: dto.driverId,
           plannedDepartureAt: dto.plannedDepartureAt,
+          plannedReturnStartAt: dto.plannedReturnStartAt,
         },
       });
 
@@ -116,6 +118,139 @@ export class TripsService {
     });
   }
 
+  /** Edição de horários e alocação — somente antes do início (D-006, RN-14). */
+  async update(actorUserId: string, id: string, dto: UpdateTripDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const trip = await tx.trip.findUnique({ where: { id } });
+      if (!trip) throw new NotFoundException('Viagem não encontrada');
+      if (trip.status !== TripStatus.SCHEDULED) {
+        throw new ConflictException(
+          'Horários e alocação só podem ser alterados em viagens agendadas (antes do início)',
+        );
+      }
+
+      const departure = dto.plannedDepartureAt
+        ? new Date(dto.plannedDepartureAt)
+        : trip.plannedDepartureAt;
+      const returnStart = dto.plannedReturnStartAt
+        ? new Date(dto.plannedReturnStartAt)
+        : trip.plannedReturnStartAt;
+
+      if (returnStart <= departure) {
+        throw new BadRequestException(
+          'O horário de início do retorno deve ser posterior à saída',
+        );
+      }
+
+      if (dto.vehicleId && dto.vehicleId !== trip.vehicleId) {
+        const vehicle = await tx.vehicle.findUnique({ where: { id: dto.vehicleId } });
+        if (!vehicle) throw new NotFoundException('Veículo não encontrado');
+        if (vehicle.status !== VehicleStatus.ACTIVE) {
+          throw new ConflictException('Veículo inativo ou em manutenção não pode ser alocado');
+        }
+        await this.assertNoVehicleConflict(tx, dto.vehicleId, departure, returnStart, id);
+      } else if (dto.plannedDepartureAt || dto.plannedReturnStartAt) {
+        await this.assertNoVehicleConflict(tx, trip.vehicleId, departure, returnStart, id);
+      }
+
+      if (dto.driverId && dto.driverId !== trip.driverId) {
+        const driver = await tx.driver.findUnique({ where: { id: dto.driverId } });
+        if (!driver) throw new NotFoundException('Motorista não encontrado');
+        if (!driver.isActive) throw new ConflictException('Motorista inativo');
+        await this.assertNoDriverConflict(tx, dto.driverId, departure, returnStart, id);
+      } else if (dto.plannedDepartureAt || dto.plannedReturnStartAt) {
+        await this.assertNoDriverConflict(tx, trip.driverId, departure, returnStart, id);
+      }
+
+      const before = {
+        vehicleId: trip.vehicleId,
+        driverId: trip.driverId,
+        plannedDepartureAt: trip.plannedDepartureAt,
+        plannedReturnStartAt: trip.plannedReturnStartAt,
+        municipalPickupPoint: trip.municipalPickupPoint,
+      };
+
+      const updated = await tx.trip.update({
+        where: { id },
+        data: {
+          ...(dto.vehicleId && { vehicleId: dto.vehicleId }),
+          ...(dto.driverId && { driverId: dto.driverId }),
+          ...(dto.municipalPickupPoint && { municipalPickupPoint: dto.municipalPickupPoint }),
+          plannedDepartureAt: departure,
+          plannedReturnStartAt: returnStart,
+        },
+        select: tripSelect,
+      });
+
+      await this.audit.record(tx, {
+        actorUserId,
+        action: 'TRIP_UPDATED',
+        entityType: 'Trip',
+        entityId: id,
+        changes: { before, after: { ...dto } },
+      });
+
+      return updated;
+    });
+  }
+
+  /** Início da viagem — horário real gerado pelo servidor (D-005, RN-13). */
+  async start(actorUserId: string, id: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const trip = await tx.trip.findUnique({ where: { id } });
+      if (!trip) throw new NotFoundException('Viagem não encontrada');
+      if (trip.status !== TripStatus.SCHEDULED) {
+        throw new ConflictException('Apenas viagens agendadas podem ser iniciadas');
+      }
+
+      const now = new Date();
+      const updated = await tx.trip.update({
+        where: { id },
+        data: { status: TripStatus.IN_PROGRESS, actualDepartureAt: now },
+        select: tripSelect,
+      });
+
+      await this.audit.record(tx, {
+        actorUserId,
+        action: 'TRIP_STARTED',
+        entityType: 'Trip',
+        entityId: id,
+        changes: { actualDepartureAt: now },
+      });
+
+      return updated;
+    });
+  }
+
+  /** Encerramento da viagem — horário real gerado pelo servidor (D-005, RN-13). */
+  async complete(actorUserId: string, id: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const trip = await tx.trip.findUnique({ where: { id } });
+      if (!trip) throw new NotFoundException('Viagem não encontrada');
+      if (trip.status !== TripStatus.IN_PROGRESS) {
+        throw new ConflictException('Apenas viagens em andamento podem ser encerradas');
+      }
+
+      const now = new Date();
+      const updated = await tx.trip.update({
+        where: { id },
+        data: { status: TripStatus.COMPLETED, actualReturnAt: now },
+        select: tripSelect,
+      });
+
+      await this.audit.record(tx, {
+        actorUserId,
+        action: 'TRIP_COMPLETED',
+        entityType: 'Trip',
+        entityId: id,
+        changes: { actualReturnAt: now },
+      });
+
+      return updated;
+    });
+  }
+
+  /** Cancelamento — somente antes do início (D-007, RN-16). */
   async cancel(actorUserId: string, id: string, reason: string) {
     return this.prisma.$transaction(async (tx) => {
       const trip = await tx.trip.findUnique({ where: { id } });
@@ -145,5 +280,114 @@ export class TripsService {
 
       return updated;
     });
+  }
+
+  /** Interrupção — somente após início, com motivo e providência (D-007, RN-16). */
+  async interrupt(actorUserId: string, id: string, dto: InterruptTripDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const trip = await tx.trip.findUnique({ where: { id } });
+      if (!trip) throw new NotFoundException('Viagem não encontrada');
+      if (trip.status !== TripStatus.IN_PROGRESS) {
+        throw new ConflictException('Apenas viagens em andamento podem ser interrompidas');
+      }
+
+      const now = new Date();
+      const updated = await tx.trip.update({
+        where: { id },
+        data: {
+          status: TripStatus.INTERRUPTED,
+          interruptionReason: dto.reason,
+          interruptedAt: now,
+          interruptedByUserId: actorUserId,
+          interruptionAction: dto.action,
+        },
+        select: tripSelect,
+      });
+
+      await this.audit.record(tx, {
+        actorUserId,
+        action: 'TRIP_INTERRUPTED',
+        entityType: 'Trip',
+        entityId: id,
+        reason: dto.reason,
+        changes: { action: dto.action, interruptedAt: now },
+      });
+
+      return updated;
+    });
+  }
+
+  /** Aprovação de rota pelo ADMIN (D-014, RN-06). */
+  async approveRoute(actorUserId: string, id: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const trip = await tx.trip.findUnique({
+        where: { id },
+        select: { id: true, status: true, _count: { select: { stops: true } } },
+      });
+      if (!trip) throw new NotFoundException('Viagem não encontrada');
+      if (trip.status === TripStatus.CANCELLED || trip.status === TripStatus.INTERRUPTED) {
+        throw new ConflictException('Não é possível aprovar rota de viagem cancelada ou interrompida');
+      }
+      if (trip._count.stops === 0) {
+        throw new BadRequestException('A viagem não possui paradas cadastradas');
+      }
+
+      const now = new Date();
+      const updated = await tx.trip.update({
+        where: { id },
+        data: { routeApprovedAt: now, routeApprovedByUserId: actorUserId },
+        select: tripSelect,
+      });
+
+      await this.audit.record(tx, {
+        actorUserId,
+        action: 'TRIP_ROUTE_APPROVED',
+        entityType: 'Trip',
+        entityId: id,
+        changes: { routeApprovedAt: now },
+      });
+
+      return updated;
+    });
+  }
+
+  // ── helpers ──────────────────────────────────────────────────────────────
+
+  private async assertNoVehicleConflict(
+    tx: Prisma.TransactionClient,
+    vehicleId: string,
+    departure: Date,
+    returnStart: Date,
+    excludeId?: string,
+  ) {
+    const count = await tx.trip.count({
+      where: {
+        vehicleId,
+        status: { in: [TripStatus.SCHEDULED, TripStatus.IN_PROGRESS] },
+        plannedDepartureAt: { lte: returnStart },
+        plannedReturnStartAt: { gte: departure },
+        ...(excludeId && { id: { not: excludeId } }),
+      },
+    });
+    if (count > 0) throw new ConflictException('Veículo já possui viagem neste período');
+  }
+
+  private async assertNoDriverConflict(
+    tx: Prisma.TransactionClient,
+    driverId: string,
+    departure: Date,
+    returnStart: Date,
+    excludeId?: string,
+  ) {
+    const count = await tx.trip.count({
+      where: {
+        driverId,
+        status: { in: [TripStatus.SCHEDULED, TripStatus.IN_PROGRESS] },
+        plannedDepartureAt: { lte: returnStart },
+        plannedReturnStartAt: { gte: departure },
+        ...(excludeId && { id: { not: excludeId } }),
+      },
+    });
+    if (count > 0) throw new ConflictException('Motorista já possui viagem neste período');
   }
 }

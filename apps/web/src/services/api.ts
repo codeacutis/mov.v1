@@ -1,6 +1,13 @@
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
 const TOKEN_KEY = 'mov.accessToken';
 
+export interface PageResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 export class ApiRequestError extends Error {
   readonly status: number;
 
@@ -65,4 +72,20 @@ export async function apiRequest<T>(
     throw new ApiRequestError(message, response.status);
   }
   return payload as T;
+}
+
+export async function fetchAllPages<T>(path: string, signal?: AbortSignal): Promise<T[]> {
+  const limit = 100;
+  const fetchPage = (page: number) =>
+    apiRequest<PageResult<T>>(`${path}?page=${page}&limit=${limit}`, { signal });
+  const first = await fetchPage(1);
+  const records = [...first.data];
+  const totalPages = Math.ceil(first.total / first.limit);
+
+  for (let page = 2; page <= totalPages; page++) {
+    const result = await fetchPage(page);
+    records.push(...result.data);
+  }
+
+  return records;
 }

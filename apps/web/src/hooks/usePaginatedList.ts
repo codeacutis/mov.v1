@@ -1,12 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { apiRequest, apiErrorMessage } from '../services/api';
-
-export interface PageResult<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-}
+import { apiRequest, apiErrorMessage, type PageResult } from '../services/api';
 
 export function usePaginatedList<T>(path: string, limit = 20) {
   const [data, setData] = useState<T[]>([]);

@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import Campo from '../../components/Campo';
 import Selecao from '../../components/Selecao';
-import { apiRequest, apiErrorMessage } from '../../services/api';
+import { apiRequest, apiErrorMessage, fetchAllPages } from '../../services/api';
 import './GerenciarParadas.css';
 
 interface GerenciarParadasProps {
@@ -99,10 +99,10 @@ export default function GerenciarParadas({ tripId, onVoltar }: GerenciarParadasP
     try {
       const [s, p] = await Promise.all([
         apiRequest<TripStop[]>(`/trips/${tripId}/stops`),
-        apiRequest<{ data: Patient[] }>('/patients?limit=200'),
+        fetchAllPages<Patient>('/patients'),
       ]);
       setStops(s);
-      setPatients(p.data.filter((pt) => pt.isActive));
+      setPatients(p.filter((pt) => pt.isActive));
     } catch (cause) {
       setError(apiErrorMessage(cause));
     } finally {

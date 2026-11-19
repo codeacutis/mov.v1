@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import Campo from '../Campo';
 import Selecao from '../Selecao';
-import { apiRequest, apiErrorMessage } from '../../services/api';
+import { apiRequest, apiErrorMessage, fetchAllPages } from '../../services/api';
 import './FormularioViagem.css';
 
 interface FormularioViagemProps {
@@ -47,10 +47,6 @@ const FORM_VAZIO: FormViagem = {
   returnTime: '',
 };
 
-function errorMessage(error: unknown): string {
-  return apiErrorMessage(error);
-}
-
 function toIso(date: string, time: string): string {
   return new Date(`${date}T${time}:00`).toISOString();
 }
@@ -61,21 +57,40 @@ export default function FormularioViagem({ onConcluir }: FormularioViagemProps) 
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [tentativa, setTentativa] = useState(0);
+  const [erroCadastros, setErroCadastros] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    const controller = new AbortController();
+    const { signal } = controller;
+
     Promise.all([
-      apiRequest<Vehicle[]>('/vehicles').catch(() => [] as Vehicle[]),
-      apiRequest<Driver[]>('/drivers').catch(() => [] as Driver[]),
-      apiRequest<Patient[]>('/patients').catch(() => [] as Patient[]),
+      fetchAllPages<Vehicle>('/vehicles', signal),
+      fetchAllPages<Driver>('/drivers', signal),
+      fetchAllPages<Patient>('/patients', signal),
     ]).then(([v, d, p]) => {
-      setVehicles(v);
-      setDrivers(d);
-      setPatients(p);
+      if (signal.aborted) return;
+      setVehicles(v.filter((vehicle) => vehicle.status === 'ACTIVE'));
+      setDrivers(d.filter((driver) => driver.isActive));
+      setPatients(p.filter((patient) => patient.isActive));
+      setLoadingData(false);
+    }).catch((cause: unknown) => {
+      if (signal.aborted) return;
+      controller.abort();
+      setErroCadastros(apiErrorMessage(cause));
       setLoadingData(false);
     });
-  }, []);
+
+    return () => controller.abort();
+  }, [tentativa]);
+
+  function tentarNovamente() {
+    setErroCadastros('');
+    setLoadingData(true);
+    setTentativa((anterior) => anterior + 1);
+  }
 
   const selectedVehicle = vehicles.find((v) => v.id === form.vehicleId);
 
@@ -96,23 +111,19 @@ export default function FormularioViagem({ onConcluir }: FormularioViagemProps) 
       });
       onConcluir(true);
     } catch (cause) {
-      setError(errorMessage(cause));
+      setError(apiErrorMessage(cause));
       setSaving(false);
     }
   }
 
   const vehicleOptions = [
     { valor: '', rotulo: 'Selecione um veículo' },
-    ...vehicles
-      .filter((v) => v.status === 'ACTIVE')
-      .map((v) => ({ valor: v.id, rotulo: `${v.plate} · ${v.capacity} lugares` })),
+    ...vehicles.map((v) => ({ valor: v.id, rotulo: `${v.plate} · ${v.capacity} lugares` })),
   ];
 
   const driverOptions = [
     { valor: '', rotulo: 'Selecione um motorista' },
-    ...drivers
-      .filter((d) => d.isActive)
-      .map((d) => ({ valor: d.id, rotulo: d.user.name })),
+    ...drivers.map((d) => ({ valor: d.id, rotulo: d.user.name })),
   ];
 
   return (
@@ -131,6 +142,15 @@ export default function FormularioViagem({ onConcluir }: FormularioViagemProps) 
 
       {loadingData ? (
         <p role="status">Carregando dados…</p>
+      ) : erroCadastros ? (
+        <section className="cartao">
+          <div className="aviso aviso--erro" role="alert">
+            Não foi possível carregar os cadastros. {erroCadastros}
+          </div>
+          <button type="button" className="botao botao--secundario" onClick={tentarNovamente}>
+            Tentar novamente
+          </button>
+        </section>
       ) : (
         <form className="duas-colunas" onSubmit={aoEnviar}>
           <section className="cartao">
@@ -191,8 +211,10 @@ export default function FormularioViagem({ onConcluir }: FormularioViagemProps) 
                   opcoes={vehicleOptions}
                   value={form.vehicleId}
                   onChange={(e) => setForm({ ...form, vehicleId: e.target.value })}
+                  disabled={vehicles.length === 0}
                   required
                 />
+                {vehicles.length === 0 && <p className="texto-suave">Nenhum veículo ativo cadastrado.</p>}
                 {selectedVehicle && (
                   <p className="texto-suave">
                     Capacidade: <strong>{selectedVehicle.capacity}</strong> passageiros
@@ -204,8 +226,10 @@ export default function FormularioViagem({ onConcluir }: FormularioViagemProps) 
                   opcoes={driverOptions}
                   value={form.driverId}
                   onChange={(e) => setForm({ ...form, driverId: e.target.value })}
+                  disabled={drivers.length === 0}
                   required
                 />
+                {drivers.length === 0 && <p className="texto-suave">Nenhum motorista ativo cadastrado.</p>}
               </div>
             </fieldset>
 
@@ -213,7 +237,8 @@ export default function FormularioViagem({ onConcluir }: FormularioViagemProps) 
               <button type="button" className="botao botao--secundario" onClick={() => onConcluir(false)} disabled={saving}>
                 Cancelar
               </button>
-              <button type="submit" className="botao botao--primario" disabled={saving}>
+              <button type="submit" className="botao botao--primario"
+                disabled={saving || vehicles.length === 0 || drivers.length === 0}>
                 {saving ? 'Salvando…' : 'Salvar viagem'}
               </button>
             </div>
@@ -224,17 +249,15 @@ export default function FormularioViagem({ onConcluir }: FormularioViagemProps) 
             <p className="texto-suave">
               Participantes são adicionados à viagem após a criação.
             </p>
-            {patients.filter((p) => p.isActive).length === 0 ? (
+            {patients.length === 0 ? (
               <p className="texto-suave">Nenhum paciente ativo cadastrado.</p>
             ) : (
               <ul className="lista-passageiros">
-                {patients
-                  .filter((p) => p.isActive)
-                  .map((p) => (
-                    <li key={p.id}>
-                      <span>{p.name}</span>
-                    </li>
-                  ))}
+                {patients.map((p) => (
+                  <li key={p.id}>
+                    <span>{p.name}</span>
+                  </li>
+                ))}
               </ul>
             )}
           </section>
