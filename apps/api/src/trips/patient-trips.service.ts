@@ -1,0 +1,308 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { AuditService } from '../audit/audit.service';
+import {
+  OutboundStatus,
+  Prisma,
+  ReturnStatus,
+  TripStatus,
+} from '../generated/prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import {
+  CreatePatientTripDto,
+  UpdatePatientTripDto,
+  UpdateReturnStatusDto,
+} from './dto/patient-trip.dto';
+
+const patientTripSelect = {
+  id: true,
+  tripId: true,
+  patientId: true,
+  appointmentLocationName: true,
+  appointmentAddress: true,
+  appointmentMunicipality: true,
+  appointmentAt: true,
+  priority: true,
+  priorityJustification: true,
+  priorityDefinedAt: true,
+  confirmationStatus: true,
+  outboundStatus: true,
+  returnStatus: true,
+  returnAbsenceReason: true,
+  returnAbsenceReportedAt: true,
+  outboundStopId: true,
+  returnStopId: true,
+  createdAt: true,
+  updatedAt: true,
+  patient: { select: { id: true, name: true, phone: true } },
+  priorityDefinedBy: { select: { id: true, name: true } },
+  returnAbsenceReportedBy: { select: { id: true, name: true } },
+  _count: { select: { companions: true } },
+} satisfies Prisma.PatientTripSelect;
+
+@Injectable()
+export class PatientTripsService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
+
+  async list(tripId: string) {
+    await this.findTripOrThrow(tripId);
+    return this.prisma.patientTrip.findMany({
+      where: { tripId },
+      select: patientTripSelect,
+      orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async create(actorUserId: string, tripId: string, dto: CreatePatientTripDto) {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${tripId}, 0))`;
+      const trip = await this.findTripOrThrow(tripId, tx);
+      if (trip.status !== TripStatus.SCHEDULED)
+        throw new ConflictException(
+          'Pacientes só podem ser incluídos em viagens agendadas',
+        );
+      const patient = await tx.patient.findUnique({
+        where: { id: dto.patientId },
+        select: { id: true, isActive: true },
+      });
+      if (!patient) throw new NotFoundException('Paciente não encontrado');
+      if (!patient.isActive)
+        throw new ConflictException(
+          'Paciente inativo não pode ser incluído na viagem',
+        );
+      const occupied =
+        trip._count.patientTrips +
+        trip.patientTrips.reduce(
+          (sum, item) => sum + item._count.companions,
+          0,
+        );
+      if (occupied + 1 > trip.vehicle.capacity)
+        throw new ConflictException(
+          `Capacidade do veículo (${trip.vehicle.capacity}) seria excedida`,
+        );
+
+      try {
+        const created = await tx.patientTrip.create({
+          data: {
+            tripId,
+            patientId: dto.patientId,
+            appointmentLocationName: dto.appointmentLocationName.trim(),
+            appointmentAddress: dto.appointmentAddress.trim(),
+            appointmentMunicipality: dto.appointmentMunicipality.trim(),
+            appointmentAt: new Date(dto.appointmentAt),
+            priority: dto.priority,
+            priorityJustification: dto.priorityJustification.trim(),
+            priorityDefinedByUserId: actorUserId,
+            priorityDefinedAt: new Date(),
+          },
+          select: patientTripSelect,
+        });
+        await this.audit.record(tx, {
+          actorUserId,
+          action: 'PATIENT_TRIP_CREATED',
+          entityType: 'PatientTrip',
+          entityId: created.id,
+          reason: dto.priorityJustification.trim(),
+          changes: { tripId, patientId: dto.patientId, priority: dto.priority },
+        });
+        return created;
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002'
+        )
+          throw new ConflictException('Paciente já participa desta viagem');
+        throw error;
+      }
+    });
+  }
+
+  async update(actorUserId: string, id: string, dto: UpdatePatientTripDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const current = await this.findOrThrow(id, tx);
+      if (current.trip.status !== TripStatus.SCHEDULED)
+        throw new ConflictException(
+          'Dados planejados só podem ser alterados antes do início da viagem',
+        );
+      if (dto.priorityJustification !== undefined && dto.priority === undefined)
+        throw new BadRequestException(
+          'A justificativa de prioridade deve acompanhar uma prioridade',
+        );
+      if (dto.priority !== undefined && !dto.priorityJustification)
+        throw new BadRequestException(
+          'Justificativa é obrigatória ao alterar a prioridade',
+        );
+      const priorityChanged =
+        dto.priority !== undefined && dto.priority !== current.priority;
+      const updated = await tx.patientTrip.update({
+        where: { id },
+        data: {
+          ...(dto.appointmentLocationName !== undefined && {
+            appointmentLocationName: dto.appointmentLocationName.trim(),
+          }),
+          ...(dto.appointmentAddress !== undefined && {
+            appointmentAddress: dto.appointmentAddress.trim(),
+          }),
+          ...(dto.appointmentMunicipality !== undefined && {
+            appointmentMunicipality: dto.appointmentMunicipality.trim(),
+          }),
+          ...(dto.appointmentAt !== undefined && {
+            appointmentAt: new Date(dto.appointmentAt),
+          }),
+          ...(dto.confirmationStatus !== undefined && {
+            confirmationStatus: dto.confirmationStatus,
+          }),
+          ...(dto.priority !== undefined && {
+            priority: dto.priority,
+            priorityJustification: dto.priorityJustification!.trim(),
+            priorityDefinedByUserId: actorUserId,
+            priorityDefinedAt: new Date(),
+          }),
+        },
+        select: patientTripSelect,
+      });
+      await this.audit.record(tx, {
+        actorUserId,
+        action: priorityChanged
+          ? 'PATIENT_TRIP_PRIORITY_CHANGED'
+          : 'PATIENT_TRIP_UPDATED',
+        entityType: 'PatientTrip',
+        entityId: id,
+        reason: dto.priorityJustification?.trim(),
+        changes: {
+          before: {
+            priority: current.priority,
+            confirmationStatus: current.confirmationStatus,
+          },
+          after: {
+            priority: updated.priority,
+            confirmationStatus: updated.confirmationStatus,
+          },
+        },
+      });
+      return updated;
+    });
+  }
+
+  async updateOutboundStatus(
+    actorUserId: string,
+    id: string,
+    status: OutboundStatus,
+  ) {
+    return this.updateOperationalStatus(
+      actorUserId,
+      id,
+      'outboundStatus',
+      status,
+      'PATIENT_TRIP_OUTBOUND_STATUS_CHANGED',
+    );
+  }
+
+  async updateReturnStatus(
+    actorUserId: string,
+    id: string,
+    dto: UpdateReturnStatusDto,
+  ) {
+    if (dto.status === ReturnStatus.NOT_RETURNING && !dto.reason?.trim())
+      throw new BadRequestException(
+        'Motivo é obrigatório para registrar que o paciente não retornará',
+      );
+    if (dto.status !== ReturnStatus.NOT_RETURNING && dto.reason !== undefined)
+      throw new BadRequestException(
+        'Motivo de não retorno só é aceito com o estado NOT_RETURNING',
+      );
+    return this.prisma.$transaction(async (tx) => {
+      const current = await this.findOrThrow(id, tx);
+      const now = new Date();
+      const notReturning = dto.status === ReturnStatus.NOT_RETURNING;
+      const updated = await tx.patientTrip.update({
+        where: { id },
+        data: {
+          returnStatus: dto.status,
+          returnAbsenceReason: notReturning ? dto.reason!.trim() : null,
+          returnAbsenceReportedAt: notReturning ? now : null,
+          returnAbsenceReportedByUserId: notReturning ? actorUserId : null,
+        },
+        select: patientTripSelect,
+      });
+      await this.audit.record(tx, {
+        actorUserId,
+        action: 'PATIENT_TRIP_RETURN_STATUS_CHANGED',
+        entityType: 'PatientTrip',
+        entityId: id,
+        reason: dto.reason?.trim(),
+        changes: { before: current.returnStatus, after: dto.status },
+      });
+      return updated;
+    });
+  }
+
+  private async updateOperationalStatus(
+    actorUserId: string,
+    id: string,
+    field: 'outboundStatus',
+    status: OutboundStatus,
+    action: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const current = await this.findOrThrow(id, tx);
+      const updated = await tx.patientTrip.update({
+        where: { id },
+        data: { [field]: status },
+        select: patientTripSelect,
+      });
+      await this.audit.record(tx, {
+        actorUserId,
+        action,
+        entityType: 'PatientTrip',
+        entityId: id,
+        changes: { before: current[field], after: status },
+      });
+      return updated;
+    });
+  }
+
+  private async findTripOrThrow(
+    tripId: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const trip = await client.trip.findUnique({
+      where: { id: tripId },
+      select: {
+        id: true,
+        status: true,
+        vehicle: { select: { capacity: true } },
+        _count: { select: { patientTrips: true } },
+        patientTrips: { select: { _count: { select: { companions: true } } } },
+      },
+    });
+    if (!trip) throw new NotFoundException('Viagem não encontrada');
+    return trip;
+  }
+
+  private async findOrThrow(
+    id: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ) {
+    const item = await client.patientTrip.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        priority: true,
+        confirmationStatus: true,
+        outboundStatus: true,
+        returnStatus: true,
+        trip: { select: { status: true } },
+      },
+    });
+    if (!item) throw new NotFoundException('Participação não encontrada');
+    return item;
+  }
+}
