@@ -24,7 +24,9 @@ describe('Veículos (e2e)', () => {
   const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 
   beforeAll(async () => {
-    const mod = await Test.createTestingModule({ imports: [AppModule] }).compile();
+    const mod = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
     app = mod.createNestApplication();
     app.useGlobalPipes(
       new ValidationPipe({
@@ -65,8 +67,15 @@ describe('Veículos (e2e)', () => {
       capacity: 12,
       status: 'ACTIVE',
     });
-    expect((await request(http).get('/vehicles').set(auth(adminToken)).expect(200)).body)
-      .toEqual([created.body]);
+    expect(
+      (await request(http).get('/vehicles').set(auth(adminToken)).expect(200))
+        .body,
+    ).toEqual({
+      data: [created.body],
+      total: 1,
+      page: 1,
+      limit: 20,
+    });
 
     await request(http)
       .patch(`/vehicles/${created.body.id}`)
@@ -74,7 +83,10 @@ describe('Veículos (e2e)', () => {
       .send({ description: 'Van adaptada', capacity: 14 })
       .expect(200)
       .expect(({ body }) => {
-        expect(body).toMatchObject({ description: 'Van adaptada', capacity: 14 });
+        expect(body).toMatchObject({
+          description: 'Van adaptada',
+          capacity: 14,
+        });
       });
 
     await request(http)
@@ -92,7 +104,9 @@ describe('Veículos (e2e)', () => {
       capacity: 14,
       status: 'INACTIVE',
     });
-    expect(await prisma.auditLog.count({ where: { entityId: persisted.id } })).toBe(3);
+    expect(
+      await prisma.auditLog.count({ where: { entityId: persisted.id } }),
+    ).toBe(3);
   });
 
   it('valida capacidade, placa duplicada e exige papel ADMIN', async () => {
