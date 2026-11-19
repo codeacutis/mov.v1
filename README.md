@@ -102,7 +102,7 @@ Detalhes em [`docs/architecture/ARCHITECTURE.md`](docs/architecture/ARCHITECTURE
 
 ## Execução na máquina local
 
-O scaffold de NestJS e React ainda não foi gerado: `apps/api` e `apps/web` existem como pastas-base. Depois da instalação (ver `apps/README.md`), o fluxo local previsto é o seguinte.
+O monorepo contém a API NestJS em `apps/api` e a interface React em `apps/web`. Consulte `apps/README.md` para a instalação.
 
 ### Pré-requisitos
 
@@ -167,7 +167,9 @@ O frontend consome a API REST e **não duplica** regras críticas de negócio.
 
 ## Status do projeto
 
-Fase atual: **fechamento de decisões e base de pastas do monorepo**, rumo à base técnica (NestJS em `apps/api`, React em `apps/web`, PostgreSQL, autenticação e CI).
+A API conta com autenticação, sessões, recuperação de senha, cadastros operacionais, planejamento e execução administrativa de viagens, paradas, participações individuais e acompanhantes. O motorista consulta viagens atribuídas com dados operacionais limitados. A interface React contém telas de login, recuperação de senha, cadastros, viagens, paradas e acompanhamento da operação.
+
+O administrador gerencia participações pela API conforme o [contrato de PatientTrip](apps/api/README.md#participações-em-viagens). A integração produtiva de WhatsApp e a política de espera no recolhimento ainda dependem de decisões.
 
 Pendências conhecidas incluem campos obrigatórios do paciente, política de espera no retorno, provedor de mapas/rotas, política de autenticação/retenção e avaliação formal antes de qualquer uso com dados reais. O detalhamento está em [`docs/decisions/DECISIONS.md`](docs/decisions/DECISIONS.md) e [`docs/project/ROADMAP.md`](docs/project/ROADMAP.md).
 

@@ -1,8 +1,8 @@
 import {
   IsEnum,
   IsISO8601,
-  IsNotEmpty,
-  IsOptional,
+  Matches,
+  ValidateIf,
   IsString,
   IsUUID,
   MaxLength,
@@ -19,17 +19,17 @@ export class CreatePatientTripDto {
   patientId!: string;
 
   @IsString()
-  @IsNotEmpty()
+  @Matches(/\S/)
   @MaxLength(200)
   appointmentLocationName!: string;
 
   @IsString()
-  @IsNotEmpty()
+  @Matches(/\S/)
   @MaxLength(300)
   appointmentAddress!: string;
 
   @IsString()
-  @IsNotEmpty()
+  @Matches(/\S/)
   @MaxLength(100)
   appointmentMunicipality!: string;
 
@@ -40,45 +40,45 @@ export class CreatePatientTripDto {
   priority!: Priority;
 
   @IsString()
-  @IsNotEmpty()
+  @Matches(/\S/)
   @MaxLength(500)
   priorityJustification!: string;
 }
 
 export class UpdatePatientTripDto {
-  @IsOptional()
+  @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsString()
-  @IsNotEmpty()
+  @Matches(/\S/)
   @MaxLength(200)
   appointmentLocationName?: string;
 
-  @IsOptional()
+  @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsString()
-  @IsNotEmpty()
+  @Matches(/\S/)
   @MaxLength(300)
   appointmentAddress?: string;
 
-  @IsOptional()
+  @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsString()
-  @IsNotEmpty()
+  @Matches(/\S/)
   @MaxLength(100)
   appointmentMunicipality?: string;
 
-  @IsOptional()
+  @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsISO8601()
   appointmentAt?: string;
 
-  @IsOptional()
+  @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsEnum(Priority)
   priority?: Priority;
 
-  @IsOptional()
+  @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsString()
-  @IsNotEmpty()
+  @Matches(/\S/)
   @MaxLength(500)
   priorityJustification?: string;
 
-  @IsOptional()
+  @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsEnum(ConfirmationStatus)
   confirmationStatus?: ConfirmationStatus;
 }
@@ -92,9 +92,9 @@ export class UpdateReturnStatusDto {
   @IsEnum(ReturnStatus)
   status!: ReturnStatus;
 
-  @IsOptional()
+  @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsString()
-  @IsNotEmpty()
+  @Matches(/\S/)
   @MaxLength(500)
   reason?: string;
 }

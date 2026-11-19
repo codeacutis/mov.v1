@@ -69,6 +69,13 @@ export class CompanionsService {
     return this.prisma.$transaction(async (tx) => {
       const patientTrip = await this.findPatientTripOrThrow(patientTripId, tx);
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${patientTrip.tripId}, 0))`;
+      const existing = await tx.tripCompanion.count({
+        where: { patientTripId },
+      });
+      if (existing >= 1)
+        throw new ConflictException(
+          'Cada paciente pode ter somente um acompanhante',
+        );
       await this.assertCapacity(patientTrip.tripId, 1, tx);
 
       return tx.tripCompanion.create({

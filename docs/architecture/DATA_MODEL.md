@@ -79,6 +79,8 @@ A viagem representa uma operação municipal de ida e volta, não uma consulta i
 
 A prioridade é contextual à consulta/viagem e não deve ficar em `Patient`.
 
+Para novos registros pela API, `NOT_RETURNING` representa aviso prévio e `NO_SHOW` representa ausência constatada no retorno. Ambos exigem motivo, com instante e usuário registrador definidos pelo backend. Uma correção de estado mantém a alteração na auditoria. Registros antigos de `NO_SHOW` podem existir sem esses metadados.
+
 ### TripStop
 - `id`
 - `tripId`
@@ -119,6 +121,15 @@ A prioridade é contextual à consulta/viagem e não deve ficar em `Patient`.
 - `reason` quando necessário
 - `changes` minimizadas e sem dados sensíveis desnecessários
 
+### TripObservation
+- `id`
+- `tripId`
+- `authorId`
+- `description`
+- `createdAt`
+
+Usada para registrar ausência no retorno e outras observações operacionais sem alterar automaticamente os estados de outras participações.
+
 ## Relacionamentos principais
 
 - User 1:0..1 Driver; todo User `MOTORISTA` deve possuir Driver.
@@ -127,7 +138,7 @@ A prioridade é contextual à consulta/viagem e não deve ficar em `Patient`.
 - Trip 1:N PatientTrip.
 - Patient 1:N PatientTrip.
 - Trip 1:N TripStop.
-- PatientTrip 1:N TripCompanion.
+- PatientTrip 1:0..1 TripCompanion.
 - PatientTrip 1:N ConfirmationLog.
 - User 1:N AuditLog.
 
@@ -142,6 +153,7 @@ A prioridade é contextual à consulta/viagem e não deve ficar em `Patient`.
 - Preservar histórico; preferir inativação lógica a exclusão física de registros operacionais.
 - Horários reais são definidos pelo servidor.
 - A participação na ida não implica obrigatoriamente participação na volta.
+- A participação na volta só pode ser marcada como utilizada quando a ida estiver `BOARDED`.
 
 ## Pontos que exigem validação antes das migrations
 

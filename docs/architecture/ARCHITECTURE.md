@@ -34,7 +34,7 @@ A divisão em módulos deve refletir os limites de domínio, não necessariament
 ## 3. Componentes externos
 
 - WhatsApp Business Platform / Cloud API: envio de mensagens e recebimento de respostas por webhook.
-- Serviço de geocodificação/rotas: **PENDING** escolha do provedor. O MVP pode começar com endereços e sequência aprovada manualmente, sem otimização automática complexa.
+- Serviço de geocodificação/rotas: não será utilizado no MVP. O ADMIN organiza as paradas, e a sequência de retorno é apresentada em ordem inversa à ida.
 - Hospedagem: proposta inicial de Vercel para frontend, Render para backend e Supabase PostgreSQL. Confirmar limites e adequação antes de uso. Esta combinação é apenas para MVP/demonstração com dados fictícios.
 
 ## 4. Fluxos principais

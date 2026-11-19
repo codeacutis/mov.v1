@@ -135,7 +135,7 @@ export class PatientTripsService {
         throw new BadRequestException(
           'A justificativa de prioridade deve acompanhar uma prioridade',
         );
-      if (dto.priority !== undefined && !dto.priorityJustification)
+      if (dto.priority !== undefined && !dto.priorityJustification?.trim())
         throw new BadRequestException(
           'Justificativa é obrigatória ao alterar a prioridade',
         );
@@ -210,25 +210,37 @@ export class PatientTripsService {
     id: string,
     dto: UpdateReturnStatusDto,
   ) {
-    if (dto.status === ReturnStatus.NOT_RETURNING && !dto.reason?.trim())
+    const absent =
+      dto.status === ReturnStatus.NOT_RETURNING ||
+      dto.status === ReturnStatus.NO_SHOW;
+    const reason = dto.reason?.trim();
+    if (absent && !reason)
       throw new BadRequestException(
-        'Motivo é obrigatório para registrar que o paciente não retornará',
+        'Motivo é obrigatório para registrar ausência no retorno',
       );
-    if (dto.status !== ReturnStatus.NOT_RETURNING && dto.reason !== undefined)
+    if (!absent && dto.reason !== undefined)
       throw new BadRequestException(
-        'Motivo de não retorno só é aceito com o estado NOT_RETURNING',
+        'Motivo de ausência só é aceito com NOT_RETURNING ou NO_SHOW',
       );
     return this.prisma.$transaction(async (tx) => {
       const current = await this.findOrThrow(id, tx);
+      if (
+        dto.status !== ReturnStatus.NOT_RETURNING &&
+        dto.status !== ReturnStatus.NO_SHOW &&
+        current.outboundStatus !== OutboundStatus.BOARDED
+      ) {
+        throw new ConflictException(
+          'O retorno só pode ser registrado para paciente que utilizou a ida',
+        );
+      }
       const now = new Date();
-      const notReturning = dto.status === ReturnStatus.NOT_RETURNING;
       const updated = await tx.patientTrip.update({
         where: { id },
         data: {
           returnStatus: dto.status,
-          returnAbsenceReason: notReturning ? dto.reason!.trim() : null,
-          returnAbsenceReportedAt: notReturning ? now : null,
-          returnAbsenceReportedByUserId: notReturning ? actorUserId : null,
+          returnAbsenceReason: absent ? reason : null,
+          returnAbsenceReportedAt: absent ? now : null,
+          returnAbsenceReportedByUserId: absent ? actorUserId : null,
         },
         select: patientTripSelect,
       });
