@@ -18,5 +18,10 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // Carregamentos de dados acionados por mudanças de rota atualizam o estado
+      // dentro do efeito para sincronizar a tela com a API.
+      'react-hooks/set-state-in-effect': 'off',
+    },
   },
 ])

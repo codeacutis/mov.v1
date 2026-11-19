@@ -16,6 +16,7 @@ Repositório **monorepo** do projeto acadêmico: documentação em `docs/`, API 
 - [Status do projeto](#status-do-projeto)
 - [Contribuição](#contribuição)
 - [Segurança e privacidade](#segurança-e-privacidade)
+- [CI/CD e deploy](#cicd-e-deploy)
 - [Autoria](#autoria)
 
 ## Apresentação
@@ -183,6 +184,10 @@ Pendências conhecidas incluem campos obrigatórios do paciente, política de es
 - Auditoria registra ator, ação, entidade e instante, sem payloads desnecessários
 
 Antes de produção: base legal, aviso de privacidade, retenção, backups, incidentes e avaliação da hospedagem. Ver [`docs/security/SECURITY.md`](docs/security/SECURITY.md).
+
+## CI/CD e deploy
+
+O workflow [`ci.yml`](.github/workflows/ci.yml) instala dependências com lockfile, executa lint, testes unitários, testes e2e da API com PostgreSQL descartável e verifica os builds da API e do frontend. O procedimento para GitHub e Render está em [`docs/development/DEVELOPMENT.md`](docs/development/DEVELOPMENT.md).
 
 ## Autoria
 
