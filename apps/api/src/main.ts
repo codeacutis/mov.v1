@@ -1,9 +1,11 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { ApiExceptionFilter } from './common/api-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.useGlobalFilters(new ApiExceptionFilter());
   app.enableCors({ origin: process.env.WEB_ORIGIN ?? 'http://localhost:5173' });
   // Validação na borda: descarta/recusa campos não declarados nos DTOs.
   app.useGlobalPipes(

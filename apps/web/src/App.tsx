@@ -91,7 +91,7 @@ export default function App() {
     default:
       return (
         <Login
-          onEntrar={() => setTela("painel")}
+          onEntrar={(role) => setTela(role === "MOTORISTA" ? "appMotorista" : "painel")}
           onEsqueciSenha={() => setTela("recuperar")}
         />
       );

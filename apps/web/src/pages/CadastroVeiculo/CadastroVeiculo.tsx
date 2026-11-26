@@ -214,7 +214,7 @@ export default function CadastroVeiculo({ onNavegar, onSair }: CadastroVeiculoPr
           </div>
           {loading ? (
             <p role="status">Carregando veículos…</p>
-          ) : vehicles.length === 0 ? (
+          ) : listError ? null : vehicles.length === 0 ? (
             <p className="texto-suave">Nenhum veículo encontrado.</p>
           ) : (
             <div className="tabela-rolagem">

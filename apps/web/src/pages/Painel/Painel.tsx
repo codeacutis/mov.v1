@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import AppLayout from '../../components/AppLayout';
-import { apiRequest } from '../../services/api';
+import { apiRequest, apiErrorMessage } from '../../services/api';
 import './Painel.css';
 
 interface PainelProps {
@@ -78,16 +78,16 @@ export default function Painel({ onNavegar, onSair }: PainelProps) {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     Promise.all([
-      apiRequest<{ data: Trip[] }>('/trips').catch(() => ({ data: [] as Trip[] })),
-      apiRequest<{ data: Vehicle[] }>('/vehicles').catch(() => ({ data: [] as Vehicle[] })),
+      apiRequest<{ data: Trip[] }>('/trips'),
+      apiRequest<{ data: Vehicle[] }>('/vehicles'),
     ]).then(([t, v]) => {
       setTrips(t.data);
       setVehicles(v.data);
-      setLoading(false);
-    });
+    }).catch(cause => setError(apiErrorMessage(cause))).finally(() => setLoading(false));
   }, []);
 
   const agora = new Date();
@@ -109,6 +109,8 @@ export default function Painel({ onNavegar, onSair }: PainelProps) {
 
       {loading ? (
         <p role="status">Carregando painel…</p>
+      ) : error ? (
+        <div className="aviso aviso--erro" role="alert">{error}</div>
       ) : (
         <>
           <section className="indicadores" aria-label="Resumo">

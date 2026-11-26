@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import AuthLayout from '../../components/AuthLayout';
 import Campo from '../../components/Campo';
-import { apiRequest, ApiRequestError, saveAccessToken } from '../../services/api';
+import { apiRequest, apiErrorMessage, ApiRequestError, saveAccessToken } from '../../services/api';
 import './Login.css';
 
 interface LoginProps {
-  onEntrar: () => void;
+  onEntrar: (role: string) => void;
   onEsqueciSenha: () => void;
 }
 interface LoginResponse {
@@ -31,14 +31,15 @@ export default function Login({ onEntrar, onEsqueciSenha }: LoginProps) {
         body: JSON.stringify({ email: usuario, password: senha }),
       });
       saveAccessToken(result.accessToken, manterConectado);
-      onEntrar();
+      const me = await apiRequest<{ role: string }>('/auth/me');
+      onEntrar(me.role);
     } catch (cause) {
       if (cause instanceof ApiRequestError && cause.status === 401) {
         setErro('E-mail ou senha inválidos.');
       } else if (cause instanceof TypeError) {
         setErro('Não foi possível acessar a API. Confira se o backend está em execução.');
       } else {
-        setErro(cause instanceof Error ? cause.message : 'Não foi possível entrar.');
+        setErro(apiErrorMessage(cause));
       }
     } finally {
       setCarregando(false);

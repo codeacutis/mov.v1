@@ -298,3 +298,18 @@ textarea:focus-visible { outline: 3px solid var(--acc); outline-offset: 2px; }
   accent-color: var(--pri);
   cursor: pointer;
 }
+
+/* Evita que conteúdo largo force a página inteira a ultrapassar a viewport. */
+.app { grid-template-columns: 230px minmax(0, 1fr); }
+.app__conteudo, .cartao, .secao, .grade > *, .filtros { min-width: 0; }
+.tabela-rolagem { max-width: 100%; overflow-x: auto; }
+img, svg { max-width: 100%; }
+@media (max-width: 860px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .menu, .menu nav { min-width: 0; max-width: 100%; }
+}
+@media (max-width: 560px) {
+  .cartao { padding: 16px; }
+  .cabecalho--linha, .cabecalho__acoes, .filtros { flex-wrap: wrap; }
+  .cabecalho__acoes, .cabecalho__acoes .botao { width: 100%; }
+}
