@@ -9,6 +9,8 @@ import { PatientTripsController } from './patient-trips.controller';
 import { PatientTripsService } from './patient-trips.service';
 import { AnalyticsController } from './analytics.controller';
 import { AnalyticsService } from './analytics.service';
+import { ReportsController } from './reports.controller';
+import { ReportsService } from './reports.service';
 
 @Module({
   controllers: [
@@ -17,6 +19,7 @@ import { AnalyticsService } from './analytics.service';
     CompanionsController,
     PatientTripsController,
     AnalyticsController,
+    ReportsController,
   ],
   providers: [
     TripsService,
@@ -24,6 +27,7 @@ import { AnalyticsService } from './analytics.service';
     CompanionsService,
     PatientTripsService,
     AnalyticsService,
+    ReportsService,
   ],
   exports: [TripsService, PatientTripsService],
 })

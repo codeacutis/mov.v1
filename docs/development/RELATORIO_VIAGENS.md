@@ -1,0 +1,7 @@
+﻿# Relatório de viagens
+
+As rotas `GET /reports/trips` e `GET /reports/trips.xlsx` exigem ADMIN. Ambas usam os mesmos filtros: `start` inclusivo e `end` exclusivo (instantes ISO 8601 da saída planejada), `municipality` (trecho sem distinção entre maiúsculas e minúsculas), `vehicleId`, `driverId` e `status`. O município seleciona viagens com ao menos uma participação ativa nesse destino; os totais e municípios exibidos correspondem à viagem inteira. A consulta não aplica paginação.
+
+Pacientes são participações não canceladas, e acompanhantes são os não removidos dessas participações. Ocupação planejada é (pacientes + acompanhantes) / capacidade atual do veículo, por viagem, incluindo viagens canceladas; não representa ocupação realizada. A capacidade não é um histórico: alterações no cadastro do veículo também alteram relatórios de viagens anteriores. O schema atual não possui chegada planejada à origem. Os horários reais são apresentados apenas quando registrados. A interface interpreta datas civis com UTC-03:00 e exibe horários em America/Sao_Paulo; datas históricas sob horário de verão podem exigir ajuste.
+
+O PDF usa o resultado da consulta exibida; o XLSX executa a consulta novamente com os mesmos filtros. Alterações concorrentes nos dados podem produzir diferenças entre os dois arquivos. Os resultados completos são carregados em memória; conjuntos muito grandes podem exigir exportação assíncrona ou processamento em lotes futuramente.

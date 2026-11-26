@@ -90,3 +90,14 @@ export async function fetchAllPages<T>(path: string, signal?: AbortSignal): Prom
 
   return records;
 }
+export async function apiDownload(path: string): Promise<Blob> {
+  const headers = new Headers();
+  const token = getAccessToken();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  const response = await fetch(`${API_BASE_URL}${path}`, { headers });
+  if (!response.ok) {
+    const body = await response.json().catch(() => undefined) as { message?: string | string[] } | undefined;
+    throw new ApiRequestError(Array.isArray(body?.message) ? body.message.join(' ') : body?.message || 'Não foi possível gerar o arquivo.', response.status);
+  }
+  return response.blob();
+}
