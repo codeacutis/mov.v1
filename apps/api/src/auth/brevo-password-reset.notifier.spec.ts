@@ -2,7 +2,16 @@ import { ConfigService } from '@nestjs/config';
 import { BrevoPasswordResetNotifier } from './brevo-password-reset.notifier';
 
 // Dados 100% fictícios.
-const config = (values: Record<string, string>) => new ConfigService(values);
+// Fake isolado do ambiente: o ConfigService real dá prioridade a process.env,
+// e o CI define WEB_ORIGIN, o que tornaria o teste dependente de onde roda.
+const config = (values: Record<string, string>): ConfigService =>
+  ({
+    get: (key: string) => values[key],
+    getOrThrow: (key: string) => {
+      if (!(key in values)) throw new Error(`${key} ausente`);
+      return values[key];
+    },
+  }) as unknown as ConfigService;
 
 describe('BrevoPasswordResetNotifier', () => {
   const env = {
