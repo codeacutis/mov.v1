@@ -95,7 +95,9 @@ Para novos registros pela API, `NOT_RETURNING` representa aviso prévio e `NO_SH
 - `plannedArrivalAt` opcional
 - `notes` operacionais não sensíveis
 
-O ADMIN organiza e aprova a sequência de ida; o retorno segue a ordem inversa. **PENDING:** representação técnica das paradas e do uso da mesma parada nos dois sentidos. Estabelecimentos podem ser compartilhados entre participações.
+O ADMIN organiza e aprova a sequência de ida; o retorno segue a ordem inversa. A implementação utiliza os registros `TripStop` existentes com `direction` e `sequence`, e as relações `PatientTrip.outboundStopId`/`returnStopId`, sem entidade adicional `PatientTripStop`. Cada local da ida possui correspondente no retorno com a mesma sequência; o retorno é percorrido em ordem decrescente. Locais e vínculos são sincronizados a partir da ida; horários previstos são próprios de cada sentido. Estabelecimentos podem ser compartilhados entre participações.
+
+`Trip.routeApprovedAt` e `routeApprovedByUserId` são limpos atomicamente após mudanças no planejamento/rota, consulta ou participantes. A aprovação exige viagem agendada, correspondência entre ida/retorno e vínculos completos dos participantes ativos. Mutações da rota após o início são bloqueadas, preservando a operação executada.
 
 ### TripCompanion
 - `removedAt`: remoção lógica; somente registros não removidos ocupam vaga.
@@ -162,7 +164,7 @@ Usada para registrar ausência no retorno e outras observações operacionais se
 ## Pontos que exigem validação antes das migrations
 
 1. Detalhes de validação dos campos de Patient não definidos pela decisão da Release 4.
-2. Representação técnica de uma parada usada nos dois sentidos, respeitada a ordem inversa confirmada.
+2. Evoluções na representação das paradas: a implementação atual reutiliza registros por direção e vínculos explícitos, respeitando a ordem inversa confirmada.
 3. Política para mais de um acompanhante por paciente.
 4. Política para paciente que não embarca na ida.
 5. Cardinalidade e unicidade dos registros de confirmação.

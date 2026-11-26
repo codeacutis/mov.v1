@@ -9,8 +9,9 @@ describe('Participation history', () => {
   function setup(status = 'SCHEDULED', cancelledAt: Date | null = null) {
     const tx = {
       $executeRaw: jest.fn(),
+      trip: { update: jest.fn() },
       patientTrip: {
-        findUnique: jest.fn().mockResolvedValue({ trip: { status }, cancelledAt }),
+        findUnique: jest.fn().mockResolvedValue({ tripId: 'trip', trip: { status }, cancelledAt }),
         update: jest.fn().mockResolvedValue({ id: 'participation' }),
       },
     };
@@ -27,6 +28,7 @@ describe('Participation history', () => {
     }));
     expect(record).toHaveBeenCalledWith(tx, expect.objectContaining({ action: 'PATIENT_TRIP_CANCELLED', actorUserId: 'admin' }));
     expect(tx.$executeRaw).toHaveBeenCalled();
+    expect(tx.trip.update).toHaveBeenCalledWith({ where: { id: 'trip' }, data: { routeApprovedAt: null, routeApprovedByUserId: null } });
   });
   it.each(['IN_PROGRESS', 'COMPLETED', 'INTERRUPTED', 'CANCELLED'])('rejects cancellation in %s', async status => {
     const { service, tx, record } = setup(status);

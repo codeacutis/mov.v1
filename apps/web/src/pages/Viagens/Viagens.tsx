@@ -99,7 +99,7 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
       {detailsId ? (
         <DetalhesViagem tripId={detailsId} onVoltar={() => { setDetailsId(null); reload(); }} />
       ) : paradaTrip ? (
-        <GerenciarParadas tripId={paradaTrip} onVoltar={() => setParadaTrip(null)} />
+        <GerenciarParadas tripId={paradaTrip} onVoltar={() => { setParadaTrip(null); reload(); }} />
       ) : criando || editing ? (
         <FormularioViagem key={editing?.id ?? "new"} trip={editing} onConcluir={aoConcluirFormulario} />
       ) : (

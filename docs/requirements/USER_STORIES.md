@@ -10,6 +10,7 @@
 - **US-06:** Como ADMIN, quero registrar estabelecimento e horário da consulta de cada paciente.
 - **US-07:** Como ADMIN, quero definir prioridade para organizar as demandas.
 - **US-08:** Como ADMIN, quero organizar manualmente e aprovar a sequência de paradas, com retorno em ordem inversa.
+  - Posso editar locais, associar participantes ativos e mover paradas para cima/baixo antes do início. Vejo ida e retorno completos para revisão; alterações invalidam a aprovação anterior e o motorista só recebe a sequência novamente após aprovação.
 - **US-09:** Como ADMIN, quero acompanhar confirmações de presença e não respostas.
 - **US-10:** Como ADMIN, quero alterar horário planejado antes do início e manter histórico.
 - **US-11:** Como ADMIN, quero cancelar uma viagem ainda não iniciada.

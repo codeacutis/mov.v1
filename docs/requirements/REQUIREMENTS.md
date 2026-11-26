@@ -18,6 +18,8 @@ Apoiar a Secretaria Municipal de Saúde na organização do transporte de pacien
 - **RF-10 — Consulta:** registrar estabelecimento, endereço e horário de consulta por participação.
 - **RF-11 — Prioridade:** permitir ao ADMIN classificar prioridade HIGH/MEDIUM/LOW e justificar.
 - **RF-12 — Rota:** permitir ao ADMIN organizar manualmente e aprovar as paradas, com retorno em ordem inversa à ida.
+  - Cadastrar, editar, excluir e reordenar paradas antes do início; associar somente participantes ativos da viagem aos estabelecimentos. Exibir desembarque na ida, embarque no retorno, sequência completa e estado da aprovação.
+  - Alterações de rota e vínculos invalidam atomicamente a aprovação anterior, exigindo revisão e nova aprovação antes de disponibilizar a sequência ao motorista.
 - **RF-13 — Visualização do motorista:** exibir rota aprovada e dados operacionais permitidos.
 - **RF-14 — Confirmação:** solicitar confirmação automática por WhatsApp quando integração estiver habilitada.
 - **RF-15 — Webhook:** receber resposta e atualizar estado de confirmação.
@@ -55,6 +57,7 @@ Apoiar a Secretaria Municipal de Saúde na organização do transporte de pacien
 - **RN-04:** saída da ida e início do retorno são horários fixos planejados.
 - **RN-05:** a rota de ida entrega pacientes nos estabelecimentos; a rota de retorno recolhe pacientes nos estabelecimentos.
 - **RN-06:** ADMIN organiza manualmente e aprova a rota; o retorno segue a ordem inversa da ida.
+  - Aprovação somente em viagem agendada, com ida e retorno correspondentes e todos os participantes ativos associados. Alterações e aprovação são serializadas; uma rota modificada não conserva a aprovação anterior.
 - **RN-07:** motorista consulta rota aprovada; navegação em tempo real não é requisito do MVP.
 - **RN-08:** se paciente estiver ausente no recolhimento, motorista tenta contato com paciente ou acompanhante.
 - **RN-09:** motorista pode prosseguir após registrar ocorrência e justificativa; não há remoção automática da participação.
