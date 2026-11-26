@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { Prisma } from '../generated/prisma/client';
+import { lockOperationalIntegrity } from '../common/operational-integrity';
 import { PrismaService } from '../prisma/prisma.service';
 
 export class CreateCompanionDto {
@@ -67,8 +68,8 @@ export class CompanionsService {
 
   async create(patientTripId: string, dto: CreateCompanionDto) {
     return this.prisma.$transaction(async (tx) => {
+      await lockOperationalIntegrity(tx);
       const patientTrip = await this.findPatientTripOrThrow(patientTripId, tx);
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${patientTrip.tripId}, 0))`;
       const existing = await tx.tripCompanion.count({
         where: { patientTripId },
       });
@@ -95,23 +96,29 @@ export class CompanionsService {
     companionId: string,
     dto: UpdateCompanionDto,
   ) {
-    await this.findCompanionOrThrow(patientTripId, companionId);
-    const data: Record<string, unknown> = {};
-    if (dto.name !== undefined) data.name = dto.name.trim();
-    if (dto.phone !== undefined) data.phone = dto.phone.trim();
-    if (dto.relationship !== undefined)
-      data.relationship = dto.relationship?.trim() || null;
+    return this.prisma.$transaction(async (tx) => {
+      await lockOperationalIntegrity(tx);
+      await this.findCompanionOrThrow(patientTripId, companionId, tx);
+      const data: Record<string, unknown> = {};
+      if (dto.name !== undefined) data.name = dto.name.trim();
+      if (dto.phone !== undefined) data.phone = dto.phone.trim();
+      if (dto.relationship !== undefined)
+        data.relationship = dto.relationship?.trim() || null;
 
-    return this.prisma.tripCompanion.update({
-      where: { id: companionId },
-      data,
-      select: companionSelect,
+      return tx.tripCompanion.update({
+        where: { id: companionId },
+        data,
+        select: companionSelect,
+      });
     });
   }
 
   async remove(patientTripId: string, companionId: string) {
-    await this.findCompanionOrThrow(patientTripId, companionId);
-    await this.prisma.tripCompanion.delete({ where: { id: companionId } });
+    await this.prisma.$transaction(async (tx) => {
+      await lockOperationalIntegrity(tx);
+      await this.findCompanionOrThrow(patientTripId, companionId, tx);
+      await tx.tripCompanion.delete({ where: { id: companionId } });
+    });
   }
 
   // ── helpers ──────────────────────────────────────────────────────────────
@@ -131,8 +138,9 @@ export class CompanionsService {
   private async findCompanionOrThrow(
     patientTripId: string,
     companionId: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
   ) {
-    const c = await this.prisma.tripCompanion.findUnique({
+    const c = await client.tripCompanion.findUnique({
       where: { id: companionId },
       select: { id: true, patientTripId: true },
     });

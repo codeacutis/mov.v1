@@ -5,6 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
+import {
+  lockOperationalIntegrity,
+  tripOccupancy,
+} from '../common/operational-integrity';
 import { Prisma, TripStatus, VehicleStatus } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
@@ -73,6 +77,7 @@ export class TripsService {
 
   async create(actorUserId: string, dto: CreateTripDto) {
     return this.prisma.$transaction(async (tx) => {
+      await lockOperationalIntegrity(tx);
       const vehicle = await tx.vehicle.findUnique({
         where: { id: dto.vehicleId },
       });
@@ -142,6 +147,7 @@ export class TripsService {
   /** Edição de horários e alocação — somente antes do início (D-006, RN-14). */
   async update(actorUserId: string, id: string, dto: UpdateTripDto) {
     return this.prisma.$transaction(async (tx) => {
+      await lockOperationalIntegrity(tx);
       const trip = await tx.trip.findUnique({ where: { id } });
       if (!trip) throw new NotFoundException('Viagem não encontrada');
       if (trip.status !== TripStatus.SCHEDULED) {
@@ -171,6 +177,12 @@ export class TripsService {
         if (vehicle.status !== VehicleStatus.ACTIVE) {
           throw new ConflictException(
             'Veículo inativo ou em manutenção não pode ser alocado',
+          );
+        }
+        const occupied = await tripOccupancy(tx, id);
+        if (occupied > vehicle.capacity) {
+          throw new ConflictException(
+            `O veículo escolhido possui capacidade para ${vehicle.capacity} passageiros, mas a viagem tem ${occupied} ocupantes`,
           );
         }
         await this.assertNoVehicleConflict(
@@ -250,6 +262,7 @@ export class TripsService {
   /** Início da viagem — horário real gerado pelo servidor (D-005, RN-13). */
   async start(actorUserId: string, id: string) {
     return this.prisma.$transaction(async (tx) => {
+      await lockOperationalIntegrity(tx);
       const trip = await tx.trip.findUnique({ where: { id } });
       if (!trip) throw new NotFoundException('Viagem não encontrada');
       if (trip.status !== TripStatus.SCHEDULED) {
@@ -280,6 +293,7 @@ export class TripsService {
   /** Encerramento da viagem — horário real gerado pelo servidor (D-005, RN-13). */
   async complete(actorUserId: string, id: string) {
     return this.prisma.$transaction(async (tx) => {
+      await lockOperationalIntegrity(tx);
       const trip = await tx.trip.findUnique({ where: { id } });
       if (!trip) throw new NotFoundException('Viagem não encontrada');
       if (trip.status !== TripStatus.IN_PROGRESS) {
@@ -310,6 +324,7 @@ export class TripsService {
   /** Cancelamento — somente antes do início (D-007, RN-16). */
   async cancel(actorUserId: string, id: string, reason: string) {
     return this.prisma.$transaction(async (tx) => {
+      await lockOperationalIntegrity(tx);
       const trip = await tx.trip.findUnique({ where: { id } });
       if (!trip) throw new NotFoundException('Viagem não encontrada');
       if (trip.status !== TripStatus.SCHEDULED) {
@@ -344,6 +359,7 @@ export class TripsService {
   /** Interrupção — somente após início, com motivo e providência (D-007, RN-16). */
   async interrupt(actorUserId: string, id: string, dto: InterruptTripDto) {
     return this.prisma.$transaction(async (tx) => {
+      await lockOperationalIntegrity(tx);
       const trip = await tx.trip.findUnique({ where: { id } });
       if (!trip) throw new NotFoundException('Viagem não encontrada');
       if (trip.status !== TripStatus.IN_PROGRESS) {

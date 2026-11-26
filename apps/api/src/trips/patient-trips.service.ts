@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
+import { lockOperationalIntegrity } from '../common/operational-integrity';
 import {
   OutboundStatus,
   Prisma,
@@ -62,7 +63,7 @@ export class PatientTripsService {
 
   async create(actorUserId: string, tripId: string, dto: CreatePatientTripDto) {
     return this.prisma.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${tripId}, 0))`;
+      await lockOperationalIntegrity(tx);
       const trip = await this.findTripOrThrow(tripId, tx);
       if (trip.status !== TripStatus.SCHEDULED)
         throw new ConflictException(

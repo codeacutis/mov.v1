@@ -156,9 +156,220 @@ describe('Validação das regras principais (e2e)', () => {
       ).toHaveLength(9);
       expect(await prisma.trip.count()).toBe(1);
     });
+
+    it('serializa edições concorrentes para o mesmo motorista', async () => {
+      const otherVehicle = await request(http)
+        .post('/vehicles')
+        .set(adminAuth())
+        .send({ plate: 'RGR0002', capacity: 3 })
+        .expect(201);
+      const otherDriver = await request(http)
+        .post('/drivers')
+        .set(adminAuth())
+        .send({ ...driverAccount, email: 'outro@teste.local' })
+        .expect(201);
+      const first = await request(http)
+        .post('/trips')
+        .set(adminAuth())
+        .send(tripPayload())
+        .expect(201);
+      const second = await request(http)
+        .post('/trips')
+        .set(adminAuth())
+        .send({
+          ...tripPayload(),
+          vehicleId: otherVehicle.body.id,
+          driverId: otherDriver.body.id,
+        })
+        .expect(201);
+      const results = await Promise.all([
+        request(http)
+          .patch(`/trips/${first.body.id}`)
+          .set(adminAuth())
+          .send({ driverId: otherDriver.body.id }),
+        request(http)
+          .patch(`/trips/${second.body.id}`)
+          .set(adminAuth())
+          .send({ driverId }),
+      ]);
+      expect(results.map((r) => r.status)).toEqual([409, 409]);
+    });
+
+    it('serializa reservas concorrentes que compartilham apenas o veículo', async () => {
+      const otherDriver = await request(http)
+        .post('/drivers')
+        .set(adminAuth())
+        .send({ ...driverAccount, email: 'outro@teste.local' })
+        .expect(201);
+      const results = await Promise.all([
+        request(http).post('/trips').set(adminAuth()).send(tripPayload()),
+        request(http)
+          .post('/trips')
+          .set(adminAuth())
+          .send({ ...tripPayload(), driverId: otherDriver.body.id }),
+      ]);
+      expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+    });
   });
 
   describe('Capacidade do veículo', () => {
+    it('rejeita troca e redução incompatíveis e permite capacidade suficiente', async () => {
+      const trip = await request(http)
+        .post('/trips')
+        .set(adminAuth())
+        .send(tripPayload())
+        .expect(201);
+      const patient = await prisma.patient.create({
+        data: { name: 'Paciente Fictício', birthDate: new Date('1990-01-01') },
+      });
+      const participation = await prisma.patientTrip.create({
+        data: {
+          tripId: trip.body.id as string,
+          patientId: patient.id,
+          priority: 'MEDIUM',
+          priorityDefinedByUserId: adminUserId,
+          priorityDefinedAt: new Date(),
+        },
+      });
+      await request(http)
+        .post(`/patient-trips/${participation.id}/companions`)
+        .set(adminAuth())
+        .send({ name: 'Acompanhante Fictício', phone: '3500000000' })
+        .expect(201);
+      const small = await request(http)
+        .post('/vehicles')
+        .set(adminAuth())
+        .send({ plate: 'RGR0002', capacity: 1 })
+        .expect(201);
+      const rejected = await request(http)
+        .patch(`/trips/${trip.body.id}`)
+        .set(adminAuth())
+        .send({ vehicleId: small.body.id })
+        .expect(409);
+      expect(rejected.body.message).toContain('capacidade');
+      await request(http)
+        .patch(`/vehicles/${vehicleId}`)
+        .set(adminAuth())
+        .send({ capacity: 1 })
+        .expect(409);
+      await request(http)
+        .patch(`/vehicles/${small.body.id}`)
+        .set(adminAuth())
+        .send({ capacity: 2 })
+        .expect(200);
+      await request(http)
+        .patch(`/trips/${trip.body.id}`)
+        .set(adminAuth())
+        .send({ vehicleId: small.body.id })
+        .expect(200);
+      await request(http)
+        .patch(`/vehicles/${vehicleId}`)
+        .set(adminAuth())
+        .send({ capacity: 1 })
+        .expect(200);
+    });
+
+    it('serializa inclusão de acompanhante com redução de capacidade', async () => {
+      const trip = await request(http)
+        .post('/trips')
+        .set(adminAuth())
+        .send(tripPayload())
+        .expect(201);
+      const patient = await prisma.patient.create({
+        data: { name: 'Paciente Fictício', birthDate: new Date('1990-01-01') },
+      });
+      const participation = await prisma.patientTrip.create({
+        data: {
+          tripId: trip.body.id as string,
+          patientId: patient.id,
+          priority: 'MEDIUM',
+          priorityDefinedByUserId: adminUserId,
+          priorityDefinedAt: new Date(),
+        },
+      });
+      const results = await Promise.all([
+        request(http)
+          .post(`/patient-trips/${participation.id}/companions`)
+          .set(adminAuth())
+          .send({ name: 'Acompanhante Fictício', phone: '3500000000' }),
+        request(http)
+          .patch(`/vehicles/${vehicleId}`)
+          .set(adminAuth())
+          .send({ capacity: 1 }),
+      ]);
+      expect(results.filter((r) => r.status === 409)).toHaveLength(1);
+      expect(
+        results.filter((r) => r.status === 200 || r.status === 201),
+      ).toHaveLength(1);
+      const vehicle = await prisma.vehicle.findUniqueOrThrow({
+        where: { id: vehicleId },
+      });
+      const count = await prisma.tripCompanion.count({
+        where: { patientTripId: participation.id },
+      });
+      expect(1 + count).toBeLessThanOrEqual(vehicle.capacity);
+    });
+
+    it('serializa inclusão de paciente com troca por veículo menor', async () => {
+      const trip = await request(http)
+        .post('/trips')
+        .set(adminAuth())
+        .send(tripPayload())
+        .expect(201);
+      const small = await request(http)
+        .post('/vehicles')
+        .set(adminAuth())
+        .send({ plate: 'RGR0002', capacity: 1 })
+        .expect(201);
+      const patients = await Promise.all(
+        ['Um', 'Dois'].map((name) =>
+          prisma.patient.create({
+            data: {
+              name: `Paciente ${name}`,
+              birthDate: new Date('1990-01-01'),
+            },
+          }),
+        ),
+      );
+      await prisma.patientTrip.create({
+        data: {
+          tripId: trip.body.id as string,
+          patientId: patients[0].id,
+          priority: 'MEDIUM',
+          priorityDefinedByUserId: adminUserId,
+          priorityDefinedAt: new Date(),
+        },
+      });
+      const results = await Promise.all([
+        request(http)
+          .post(`/trips/${trip.body.id}/patient-trips`)
+          .set(adminAuth())
+          .send({
+            patientId: patients[1].id,
+            appointmentLocationName: 'Unidade',
+            appointmentAddress: 'Rua Fictícia',
+            appointmentMunicipality: 'Cidade',
+            appointmentAt: '2099-08-10T10:00:00.000Z',
+            priority: 'MEDIUM',
+            priorityJustification: 'Planejamento',
+          }),
+        request(http)
+          .patch(`/trips/${trip.body.id}`)
+          .set(adminAuth())
+          .send({ vehicleId: small.body.id }),
+      ]);
+      expect(results.filter((r) => r.status === 409)).toHaveLength(1);
+      expect(
+        results.filter((r) => r.status === 200 || r.status === 201),
+      ).toHaveLength(1);
+      const current = await prisma.trip.findUniqueOrThrow({
+        where: { id: trip.body.id as string },
+        include: { vehicle: true, _count: { select: { patientTrips: true } } },
+      });
+      expect(current._count.patientTrips).toBeLessThanOrEqual(
+        current.vehicle.capacity,
+      );
+    });
     it('aceita ocupação exatamente no limite e rejeita um ocupante excedente', async () => {
       const trip = await request(http)
         .post('/trips')

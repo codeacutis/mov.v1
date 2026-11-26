@@ -27,8 +27,8 @@ Legenda: 🔴 bloqueante · 🟠 importante · 🟡 evolução
 
 | | Pendência | Detalhe |
 |---|---|---|
-| 🔴 | **Conflito de agenda só na aplicação** | `TripsService.create` verifica sobreposição por consulta, o que não é seguro com requisições simultâneas (D-021/RNF-04 exigem proteção no banco). Além disso, o intervalo considerado termina no *início do retorno*, não no fim da operação. Falta uma constraint de exclusão no PostgreSQL e definir, com o responsável pelo produto, o campo de fim planejado da operação (hoje o modelo só tem saída e início do retorno). |
-| 🟠 | Capacidade e participantes | Conferir contagem de pacientes + acompanhantes sob concorrência ao adicionar participantes (RF-09). |
+| 🔴 | **Fim planejado da ocupação** | As operações de agenda e lotação usam bloqueio transacional compartilhado no PostgreSQL, mas o intervalo ainda termina no *início do retorno*, não no fim da operação. O responsável pelo produto deve definir o marco de fim planejado antes de alterar o modelo e a validação. Até então a agenda não protege toda a operação municipal. |
+| 🟠 | Capacidade e participantes | A inclusão, troca de veículo e redução de capacidade usam o mesmo bloqueio transacional. Novos caminhos de escrita que afetem lotação ou agenda devem aderir ao protocolo; escritas diretas no banco não são protegidas pelo bloqueio consultivo. |
 | 🟡 | Paradas e rota | Modelo de sequências ida/volta e aprovação ainda dependem de decisão (DATA_MODEL "pontos que exigem validação"). |
 
 ## 4. Deploy (D-019)

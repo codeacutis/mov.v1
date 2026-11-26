@@ -5,6 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
+import {
+  lockOperationalIntegrity,
+  tripOccupancy,
+} from '../common/operational-integrity';
 import { Prisma, TripStatus, VehicleStatus } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateVehicleDto } from './dto/create-vehicle.dto';
@@ -71,8 +75,27 @@ export class VehiclesService {
 
     try {
       return await this.prisma.$transaction(async (tx) => {
+        await lockOperationalIntegrity(tx);
         const current = await tx.vehicle.findUnique({ where: { id } });
         if (!current) throw new NotFoundException('Veículo não encontrado');
+
+        if (dto.capacity !== undefined && dto.capacity < current.capacity) {
+          const trips = await tx.trip.findMany({
+            where: {
+              vehicleId: id,
+              status: { in: [TripStatus.SCHEDULED, TripStatus.IN_PROGRESS] },
+            },
+            select: { id: true },
+          });
+          for (const trip of trips) {
+            const occupied = await tripOccupancy(tx, trip.id);
+            if (occupied > dto.capacity) {
+              throw new ConflictException(
+                `A capacidade não pode ser reduzida para ${dto.capacity}: uma viagem possui ${occupied} ocupantes`,
+              );
+            }
+          }
+        }
 
         if (
           dto.status !== undefined &&
@@ -83,7 +106,8 @@ export class VehiclesService {
         }
 
         const data: Prisma.VehicleUpdateInput = {};
-        if (dto.plate !== undefined) data.plate = dto.plate.trim().toUpperCase();
+        if (dto.plate !== undefined)
+          data.plate = dto.plate.trim().toUpperCase();
         if (dto.description !== undefined) {
           data.description = dto.description?.trim() || null;
         }
@@ -108,6 +132,7 @@ export class VehiclesService {
 
   async inactivate(actorUserId: string, id: string) {
     return this.prisma.$transaction(async (tx) => {
+      await lockOperationalIntegrity(tx);
       const current = await tx.vehicle.findUnique({ where: { id } });
       if (!current) throw new NotFoundException('Veículo não encontrado');
       if (current.status === VehicleStatus.INACTIVE) return current;
