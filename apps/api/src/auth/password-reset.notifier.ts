@@ -17,6 +17,14 @@ export abstract class PasswordResetNotifier {
   abstract send(notification: PasswordResetNotification): Promise<void>;
 }
 
+/** Monta o link do front que recebe ?token=... */
+export function buildResetLink(config: ConfigService, token: string): string {
+  const base =
+    config.get<string>('PASSWORD_RESET_URL') ??
+    `${config.get<string>('WEB_ORIGIN') ?? 'http://localhost:5173'}/redefinir-senha`;
+  return `${base}?token=${encodeURIComponent(token)}`;
+}
+
 /**
  * Implementação padrão enquanto não há provedor de e-mail. Em produção não
  * entrega nada. Somente em desenvolvimento, com opt-in explícito
@@ -42,10 +50,9 @@ export class DevPasswordResetNotifier extends PasswordResetNotifier {
       );
       return Promise.resolve();
     }
-    const base =
-      this.config.get<string>('PASSWORD_RESET_URL') ??
-      `${this.config.get<string>('WEB_ORIGIN') ?? 'http://localhost:5173'}/redefinir-senha`;
-    this.logger.warn(`[DEV] Link de recuperação: ${base}?token=${token}`);
+    this.logger.warn(
+      `[DEV] Link de recuperação: ${buildResetLink(this.config, token)}`,
+    );
     return Promise.resolve();
   }
 }

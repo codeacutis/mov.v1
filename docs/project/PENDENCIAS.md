@@ -8,7 +8,7 @@ Legenda: 🔴 bloqueante · 🟠 importante · 🟡 evolução
 
 | | Pendência | Detalhe |
 |---|---|---|
-| 🔴 | **Entrega do link (e-mail)** | Não há provedor escolhido. O `PasswordResetNotifier` padrão **não envia nada**; só em desenvolvimento, com `PASSWORD_RESET_DEV_LOG=true`, o link aparece no console. Decidir provedor (SMTP, Resend etc.), custo e política de contato, e implementar um `PasswordResetNotifier` real. |
+| 🟠 | **Entrega do link (e-mail)** | Implementada via API HTTP do Brevo (`BrevoPasswordResetNotifier`), pois o Render free bloqueia SMTP. **Escolha do Brevo ainda sem aprovação formal do responsável** (provedor, custo, política de contato). Exige `BREVO_API_KEY` e `MAIL_FROM_EMAIL` (remetente verificado). Sem elas, vale o modo de desenvolvimento. Falha de entrega só é registrada em log (HTTP status), sem retentativa. |
 | 🔴 | **Tela no front** | Falta a página `/redefinir-senha` (recebe `?token=`) e o formulário "esqueci minha senha" na tela de login. Só o backend existe. |
 | 🟠 | Limite de tentativas por IP | Hoje só há intervalo de 60 s por usuário. Sem throttling por IP em `forgot-password`/`reset-password`/`login`. |
 | 🟠 | Limpeza periódica | Tokens de recuperação e sessões expirados nunca são removidos do banco. |
