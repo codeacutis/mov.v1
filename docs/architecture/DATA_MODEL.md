@@ -58,6 +58,7 @@ Idade deve ser calculada a partir de `birthDate`; não persistir idade como dado
 A viagem representa uma operação municipal de ida e volta, não uma consulta individual.
 
 ### PatientTrip
+- `cancelledAt`, `cancellationReason`, `cancelledByUserId`: cancelamento lógico antes do início (D-026).
 - `id`
 - `tripId`
 - `patientId`
@@ -97,6 +98,7 @@ Para novos registros pela API, `NOT_RETURNING` representa aviso prévio e `NO_SH
 O ADMIN organiza e aprova a sequência de ida; o retorno segue a ordem inversa. **PENDING:** representação técnica das paradas e do uso da mesma parada nos dois sentidos. Estabelecimentos podem ser compartilhados entre participações.
 
 ### TripCompanion
+- `removedAt`: remoção lógica; somente registros não removidos ocupam vaga.
 - `id`
 - `patientTripId`
 - `name`
@@ -149,6 +151,7 @@ Usada para registrar ausência no retorno e outras observações operacionais se
 - Para a ocupação planejada do veículo, considerar da saída municipal à chegada prevista ao município de origem. A adequação da implementação existente permanece pendente.
 - Veículo inativo ou em manutenção não pode ser alocado.
 - Total de passageiros = pacientes + acompanhantes; motorista não entra na capacidade.
+- Na ocupação, excluir participações canceladas e seus acompanhantes; excluir acompanhantes removidos. Cancelamento preserva unicidade paciente/viagem e histórico.
 - Impedir duplicidade do mesmo paciente na mesma viagem, salvo decisão explícita em contrário.
 - Atualizações concorrentes de agenda precisam ser protegidas por transação e mecanismo de integridade no PostgreSQL.
 - Preservar histórico; preferir inativação lógica a exclusão física de registros operacionais.

@@ -75,6 +75,7 @@ enum ConfirmationEventType {
 }
 
 model User {
+  cancelledParticipations PatientTrip[] @relation("ParticipationCancelledBy")
   id           String   @id @default(uuid(7)) @db.Uuid
   name         String
   email        String   @unique
@@ -235,6 +236,10 @@ model TripObservation {
 }
 
 model PatientTrip {
+  cancelledBy User? @relation("ParticipationCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: Restrict)
+  cancelledAt DateTime? @db.Timestamptz(3)
+  cancellationReason String?
+  cancelledByUserId String? @db.Uuid
   id                            String             @id @default(uuid(7)) @db.Uuid
   tripId                        String             @db.Uuid
   patientId                     String             @db.Uuid
@@ -301,6 +306,7 @@ model TripStop {
 }
 
 model TripCompanion {
+  removedAt DateTime? @db.Timestamptz(3)
   id            String   @id @default(uuid(7)) @db.Uuid
   patientTripId String   @db.Uuid
   name          String

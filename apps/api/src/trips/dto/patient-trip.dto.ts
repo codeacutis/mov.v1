@@ -98,3 +98,10 @@ export class UpdateReturnStatusDto {
   @MaxLength(500)
   reason?: string;
 }
+
+export class CancelPatientTripDto {
+  @IsString()
+  @Matches(/\S/)
+  @MaxLength(500)
+  reason!: string;
+}

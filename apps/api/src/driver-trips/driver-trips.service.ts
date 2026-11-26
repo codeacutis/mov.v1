@@ -16,7 +16,7 @@ const summarySelect = {
   actualDepartureAt: true,
   actualReturnAt: true,
   vehicle: { select: { plate: true, description: true, capacity: true } },
-  _count: { select: { patientTrips: true } },
+  _count: { select: { patientTrips: { where: { cancelledAt: null } } } },
 } satisfies Prisma.TripSelect;
 
 const detailSelect = {
@@ -37,6 +37,7 @@ const detailSelect = {
     },
   },
   patientTrips: {
+    where: { cancelledAt: null },
     orderBy: { createdAt: 'asc' },
     select: {
       id: true,
@@ -57,7 +58,7 @@ const detailSelect = {
           needsBoardingAssistance: true,
         },
       },
-      companions: { select: { name: true, phone: true, relationship: true } },
+      companions: { where: { removedAt: null }, select: { name: true, phone: true, relationship: true } },
     },
   },
 } satisfies Prisma.TripSelect;

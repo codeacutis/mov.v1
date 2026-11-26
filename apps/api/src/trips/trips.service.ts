@@ -31,7 +31,7 @@ const tripSelect = {
   createdAt: true,
   vehicle: { select: { id: true, plate: true, capacity: true } },
   driver: { select: { id: true, user: { select: { id: true, name: true } } } },
-  _count: { select: { patientTrips: true } },
+  _count: { select: { patientTrips: { where: { cancelledAt: null } } } },
 } satisfies Prisma.TripSelect;
 
 @Injectable()

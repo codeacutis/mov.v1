@@ -272,6 +272,9 @@ describe('Paradas e Acompanhantes (e2e)', () => {
         .set(auth())
         .expect(200);
       expect(list.body).toHaveLength(0);
+      const preserved = await prisma.tripCompanion.findUniqueOrThrow({ where: { id: created.body.id } });
+      expect(preserved.removedAt).toBeTruthy();
+      expect(await prisma.auditLog.count({ where: { entityId: preserved.id, action: 'COMPANION_REMOVED' } })).toBe(1);
     });
 
     it('bloqueia acompanhante quando capacidade do veículo seria excedida', async () => {

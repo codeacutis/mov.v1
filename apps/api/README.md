@@ -107,10 +107,15 @@ As rotas abaixo exigem o papel `ADMIN`.
 | `GET /trips/:tripId/patient-trips` | Lista participações e prioridades. |
 | `POST /trips/:tripId/patient-trips` | Inclui paciente ativo em viagem agendada, com dados da consulta, prioridade e justificativa. Cada paciente só pode aparecer uma vez na viagem. Pacientes e acompanhantes ocupam vagas. |
 | `PATCH /patient-trips/:id` | Atualiza dados planejados antes do início. Para definir prioridade, envie `priority` e `priorityJustification`. |
+| `PATCH /patient-trips/:id/cancel` | Cancela logicamente antes do início com `reason` obrigatório, autor e instante do servidor, liberando vagas sem excluir o registro. |
 | `PATCH /patient-trips/:id/outbound-status` | Altera somente o estado de ida da participação indicada. |
 | `PATCH /patient-trips/:id/return-status` | Altera somente o estado de retorno da participação indicada. |
 
 As rotas de estado recebem `status`. No retorno, envie também `reason` para `NOT_RETURNING` (aviso prévio) ou `NO_SHOW` (ausência constatada). O backend registra autor e horário. A participação continua na viagem e a ida permanece independente. A falta de confirmação não aciona alteração automática. O registro administrativo de ausência não define quando o motorista pode seguir viagem.
+
+A tela **Participantes e detalhes** centraliza consulta, prioridade, acompanhante e ocupação; confirmação é somente leitura. A participação cancelada permanece única por paciente/viagem, sem reinclusão automática. A remoção de acompanhante agora mantém o registro com `removedAt` e gera auditoria. Participações canceladas e acompanhantes removidos não ocupam vagas nem integram a lista operacional do motorista. Alterações planejadas de acompanhantes exigem participação ativa e viagem agendada. Registros excluídos antes desta versão não são recuperados.
+
+Aplicar a migration `20261126150000_participation_history` antes de executar esta versão.
 
 
 ### Manuten??o administrativa de motoristas

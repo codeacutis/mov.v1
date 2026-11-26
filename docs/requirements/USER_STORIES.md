@@ -33,6 +33,9 @@
 
 ## Critérios transversais de aceite
 
+- Como ADMIN, quero gerenciar consulta, prioridade e acompanhante nos detalhes da viagem e consultar a ocupação atualizada.
+- Como ADMIN, quero cancelar participação antes do início com motivo, liberando vagas e preservando histórico (D-026).
+
 - A autorização deve ser validada no backend.
 - Alterações críticas devem gerar auditoria.
 - Não resposta não pode alterar automaticamente a participação para desistência.

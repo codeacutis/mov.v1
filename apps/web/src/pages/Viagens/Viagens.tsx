@@ -1,4 +1,5 @@
 import './Viagens.css';
+import DetalhesViagem from './DetalhesViagem';
 import { useState } from 'react';
 import AppLayout from '../../components/AppLayout';
 import FormularioViagem from '../../components/FormularioViagem';
@@ -52,6 +53,7 @@ function formatDateTime(iso: string) {
 export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: ViagensProps) {
   const { data: trips, loading, error: listError, page, totalPages, q, search, goTo, reload } =
     usePaginatedList<Trip>('/trips');
+  const [detailsId, setDetailsId] = useState<string | null>(null);
   const [criando, setCriando] = useState(iniciarCriando);
   const [paradaTrip, setParadaTrip] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
@@ -82,10 +84,11 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
     onNavegar(item);
   }
 
-  function aoConcluirFormulario(salvou: boolean) {
+  function aoConcluirFormulario(salvou: boolean, tripId?: string) {
     setCriando(false);
     setEditing(undefined);
     if (salvou) {
+      if (!editing && tripId) setDetailsId(tripId);
       setNotice(editing ? 'Viagem atualizada.' : 'Viagem cadastrada com sucesso.');
       reload();
     }
@@ -93,7 +96,9 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
 
   return (
     <AppLayout ativo="Viagens" onNavegar={navegar} onSair={onSair}>
-      {paradaTrip ? (
+      {detailsId ? (
+        <DetalhesViagem tripId={detailsId} onVoltar={() => { setDetailsId(null); reload(); }} />
+      ) : paradaTrip ? (
         <GerenciarParadas tripId={paradaTrip} onVoltar={() => setParadaTrip(null)} />
       ) : criando || editing ? (
         <FormularioViagem key={editing?.id ?? "new"} trip={editing} onConcluir={aoConcluirFormulario} />
@@ -159,6 +164,7 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
                           </span>
                         </td>
                         <td>
+                          <button className="link" onClick={() => setDetailsId(t.id)}>Participantes e detalhes</button>
                           {t.status === 'SCHEDULED' && <>
                             <button className="link" type="button" onClick={() => { setError(''); setEditing(t); }}>Editar</button>
                             <button className="link" type="button" disabled={saving} onClick={() => { setReason(''); setAction(''); setError(''); setOperation({ trip: t, kind: 'cancel' }); }}>Cancelar</button>
