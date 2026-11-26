@@ -117,6 +117,27 @@ A tela **Participantes e detalhes** centraliza consulta, prioridade, acompanhant
 
 Aplicar a migration `20261126150000_participation_history` antes de executar esta versão.
 
+### Portal operacional do motorista
+
+Após login ou restauração, `/auth/me` determina o perfil e a área inicial. Sessão inválida/expirada remove o token local e retorna ao login. O portal utiliza exclusivamente os contratos operacionais abaixo, sem consultas administrativas.
+
+| Método | Endpoint | Contrato |
+| --- | --- | --- |
+| GET | `/driver/trips` | Array de viagens atribuídas ao Driver ativo |
+| GET | `/driver/trips/:id` | Detalhe operacional com participantes e rota aprovada |
+| PATCH | `/driver/trips/:id/start` | Iniciar ida com rota aprovada |
+| PATCH | `/driver/trips/:id/start-return` | Registrar início real do retorno uma única vez |
+| PATCH | `/driver/trips/:id/complete` | Concluir após início do retorno |
+| PATCH | `/driver/trips/:id/participants/:participationId/outbound-status` | `{ status: "BOARDED" ou "NO_SHOW" }`, durante a ida |
+| PATCH | `/driver/trips/:id/participants/:participationId/return-status` | `{ status: "RETURNED", "NOT_RETURNING" ou "NO_SHOW", reason?, contactAttempt? }` |
+| POST | `/driver/trips/:id/observations` | `{ type: "INCIDENT" ou "CONTACT_ATTEMPT", description, patientTripId? }` |
+
+Mutações respondem `204`; os dados atualizados são recarregados pelo GET operacional. O vínculo é validado dentro da transação, usando os serviços compartilhados de viagens e participações. Outro motorista recebe `404`; ADMIN usa os endpoints administrativos. Ida e retorno permanecem independentes. `NOT_RETURNING` exige motivo e pode ser informado durante a viagem; embarque e ausência no retorno exigem retorno iniciado. `NO_SHOW` no retorno exige motivo e descrição da tentativa de contato e preserva duas observações na mesma transação. Tentativa de contato avulsa exige participação da mesma viagem.
+
+Todos os horários reais e de auditoria são gerados no servidor. Não há timeout, autorização adicional de saída nem mudança automática de participantes pendentes. A consulta não inclui notas livres de paradas, textos de ocorrências, parentesco, prioridade, confirmação ou dados pessoais além dos necessários à operação.
+
+Aplicar a migration `20261126190000_driver_operations` antes de executar o portal; registros antigos mantêm início real do retorno nulo e observações anteriores ficam com tipo `INCIDENT`.
+
 ### Paradas e aprovação da rota
 
 Rotas exclusivas do ADMIN, sob `/trips/:tripId/stops`:

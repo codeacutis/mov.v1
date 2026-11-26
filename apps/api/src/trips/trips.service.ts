@@ -9,7 +9,8 @@ import {
   lockOperationalIntegrity,
   tripOccupancy,
 } from '../common/operational-integrity';
-import { Prisma, TripStatus, VehicleStatus } from '../generated/prisma/client';
+import { Prisma, TripStatus, VehicleStatus, TripObservationType } from '../generated/prisma/client';
+import { findOperationalTrip } from './driver-operation-scope';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { InterruptTripDto, UpdateTripDto } from './dto/update-trip.dto';
@@ -21,6 +22,7 @@ const tripSelect = {
   plannedDepartureAt: true,
   plannedReturnStartAt: true,
   actualDepartureAt: true,
+  actualReturnStartAt: true,
   actualReturnAt: true,
   status: true,
   cancellationReason: true,
@@ -263,16 +265,17 @@ export class TripsService {
   }
 
   /** Início da viagem — horário real gerado pelo servidor (D-005, RN-13). */
-  async start(actorUserId: string, id: string) {
+  async start(actorUserId: string, id: string, driverUserId?: string) {
     return this.prisma.$transaction(async (tx) => {
       await lockOperationalIntegrity(tx);
-      const trip = await tx.trip.findUnique({ where: { id } });
-      if (!trip) throw new NotFoundException('Viagem não encontrada');
+      const trip = await findOperationalTrip(tx, id, driverUserId);
       if (trip.status !== TripStatus.SCHEDULED) {
         throw new ConflictException(
           'Apenas viagens agendadas podem ser iniciadas',
         );
       }
+
+      if (driverUserId && !trip.routeApprovedAt) throw new ConflictException('Aguarde a aprovação da rota antes de iniciar');
 
       const now = new Date();
       const updated = await tx.trip.update({
@@ -294,16 +297,17 @@ export class TripsService {
   }
 
   /** Encerramento da viagem — horário real gerado pelo servidor (D-005, RN-13). */
-  async complete(actorUserId: string, id: string) {
+  async complete(actorUserId: string, id: string, driverUserId?: string) {
     return this.prisma.$transaction(async (tx) => {
       await lockOperationalIntegrity(tx);
-      const trip = await tx.trip.findUnique({ where: { id } });
-      if (!trip) throw new NotFoundException('Viagem não encontrada');
+      const trip = await findOperationalTrip(tx, id, driverUserId);
       if (trip.status !== TripStatus.IN_PROGRESS) {
         throw new ConflictException(
           'Apenas viagens em andamento podem ser encerradas',
         );
       }
+
+      if (driverUserId && !trip.actualReturnStartAt) throw new ConflictException('Registre o início do retorno antes de concluir');
 
       const now = new Date();
       const updated = await tx.trip.update({
@@ -423,18 +427,34 @@ export class TripsService {
     });
   }
 
-  async addObservation(actorUserId: string, id: string, description: string) {
+  async startReturn(actorUserId: string, id: string, driverUserId?: string) {
+    return this.prisma.$transaction(async tx => {
+      await lockOperationalIntegrity(tx);
+      const trip = await findOperationalTrip(tx, id, driverUserId);
+      if (trip.status !== TripStatus.IN_PROGRESS || trip.actualReturnStartAt) throw new ConflictException('O retorno só pode ser iniciado uma vez, durante a viagem');
+      const now = new Date();
+      const updated = await tx.trip.update({ where: { id }, data: { actualReturnStartAt: now }, select: tripSelect });
+      await this.audit.record(tx, { actorUserId, action: 'TRIP_RETURN_STARTED', entityType: 'Trip', entityId: id, changes: { actualReturnStartAt: now } });
+      return updated;
+    });
+  }
+
+  async addObservation(actorUserId: string, id: string, description: string, driverUserId?: string, options?: { type: TripObservationType; patientTripId?: string }) {
     return this.prisma.$transaction(async (tx) => {
-      const trip = await tx.trip.findUnique({
-        where: { id },
-        select: { id: true },
-      });
-      if (!trip) throw new NotFoundException('Viagem não encontrada');
+      await lockOperationalIntegrity(tx);
+      const trip = await findOperationalTrip(tx, id, driverUserId);
+      if (driverUserId && trip.status !== TripStatus.IN_PROGRESS) throw new ConflictException('Ocorrências operacionais exigem viagem em andamento');
+      if (options?.type === 'CONTACT_ATTEMPT' && !options.patientTripId) throw new BadRequestException('Selecione a participação para registrar a tentativa de contato');
+      if (options?.patientTripId) {
+        const participant = await tx.patientTrip.findFirst({ where: { id: options.patientTripId, tripId: id, cancelledAt: null }, select: { id: true } });
+        if (!participant) throw new NotFoundException('Participação não encontrada');
+      }
       const observation = await tx.tripObservation.create({
         data: {
           tripId: id,
           authorId: actorUserId,
           description: description.trim(),
+          ...(options && { type: options.type, patientTripId: options.patientTripId }),
         },
       });
       await this.audit.record(tx, {
@@ -442,7 +462,7 @@ export class TripsService {
         action: 'TRIP_OBSERVATION_CREATED',
         entityType: 'Trip',
         entityId: id,
-        changes: { observationId: observation.id },
+        changes: { observationId: observation.id, type: options?.type ?? 'INCIDENT', patientTripId: options?.patientTripId ?? null },
       });
       return observation;
     });
