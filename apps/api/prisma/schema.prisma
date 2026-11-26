@@ -59,6 +59,11 @@ enum StopDirection {
   RETURN
 }
 
+enum TripObservationType {
+  INCIDENT
+  CONTACT_ATTEMPT
+}
+
 enum StopType {
   MUNICIPAL_PICKUP
   APPOINTMENT
@@ -192,6 +197,7 @@ model Trip {
   plannedDepartureAt    DateTime   @db.Timestamptz(3)
   plannedReturnStartAt  DateTime   @db.Timestamptz(3)
   actualDepartureAt     DateTime?  @db.Timestamptz(3)
+  actualReturnStartAt   DateTime?  @db.Timestamptz(3)
   actualReturnAt        DateTime?  @db.Timestamptz(3)
   status                TripStatus @default(SCHEDULED)
   cancellationReason    String?
@@ -226,16 +232,20 @@ model TripObservation {
   tripId      String   @db.Uuid
   authorId    String   @db.Uuid
   description String
+  type        TripObservationType @default(INCIDENT)
+  patientTripId String? @db.Uuid
   createdAt   DateTime @default(now()) @db.Timestamptz(3)
 
   trip   Trip @relation(fields: [tripId], references: [id])
   author User @relation(fields: [authorId], references: [id])
+  patientTrip PatientTrip? @relation(fields: [patientTripId], references: [id], onDelete: Restrict)
 
   @@index([tripId, createdAt])
   @@map("trip_observations")
 }
 
 model PatientTrip {
+  observations TripObservation[]
   cancelledBy User? @relation("ParticipationCancelledBy", fields: [cancelledByUserId], references: [id], onDelete: Restrict)
   cancelledAt DateTime? @db.Timestamptz(3)
   cancellationReason String?

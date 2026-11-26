@@ -21,5 +21,6 @@ import { PatientTripsService } from './patient-trips.service';
     CompanionsService,
     PatientTripsService,
   ],
+  exports: [TripsService, PatientTripsService],
 })
 export class TripsModule {}

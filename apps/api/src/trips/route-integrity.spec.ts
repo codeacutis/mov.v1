@@ -238,7 +238,7 @@ describe('Route approval integrity', () => {
       ],
     };
     Object.assign(tx.trip, { findFirst: jest.fn().mockResolvedValue(detail) });
-    const driver = new DriverTripsService(prisma);
+    const driver = new DriverTripsService(prisma, {} as TripsService, {} as import('./patient-trips.service').PatientTripsService);
     const hidden = await driver.get('driver', 'trip');
     expect(hidden.stops).toEqual([]);
     expect(hidden.patientTrips[0].outboundStopId).toBeNull();

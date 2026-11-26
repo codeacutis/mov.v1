@@ -462,7 +462,6 @@ describe('Autorização por papel (e2e)', () => {
         {
           name: 'Acompanhante Teste',
           phone: '(00) 98888-8888',
-          relationship: null,
         },
       ]);
       expect(res.body.stops).toHaveLength(1);
@@ -480,6 +479,8 @@ describe('Autorização por papel (e2e)', () => {
         'passwordHash',
         'email',
         'licenseNumber',
+        'notes',
+        'relationship',
       ]) {
         expect(json).not.toContain(forbidden);
       }

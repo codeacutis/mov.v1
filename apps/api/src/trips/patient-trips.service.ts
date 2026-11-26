@@ -14,6 +14,7 @@ import {
 } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { invalidateRoute } from './route-integrity';
+import { assignedDriver, DriverOperationScope } from './driver-operation-scope';
 import {
   CreatePatientTripDto,
   UpdatePatientTripDto,
@@ -213,6 +214,7 @@ export class PatientTripsService {
     actorUserId: string,
     id: string,
     status: OutboundStatus,
+    scope?: DriverOperationScope,
   ) {
     return this.updateOperationalStatus(
       actorUserId,
@@ -220,13 +222,15 @@ export class PatientTripsService {
       'outboundStatus',
       status,
       'PATIENT_TRIP_OUTBOUND_STATUS_CHANGED',
+      scope,
     );
   }
 
   async updateReturnStatus(
     actorUserId: string,
     id: string,
-    dto: UpdateReturnStatusDto,
+    dto: UpdateReturnStatusDto & { contactAttempt?: string },
+    scope?: DriverOperationScope,
   ) {
     const absent =
       dto.status === ReturnStatus.NOT_RETURNING ||
@@ -242,8 +246,13 @@ export class PatientTripsService {
       );
     return this.prisma.$transaction(async (tx) => {
       await lockOperationalIntegrity(tx);
-      const current = await this.findOrThrow(id, tx);
+      const current = await this.findOrThrow(id, tx, scope);
       if (current.cancelledAt) throw new ConflictException('Participação cancelada não pode ser alterada');
+      if (scope) {
+        this.assertDriverPhase(current.trip, 'RETURN', dto.status === ReturnStatus.NOT_RETURNING);
+        if (dto.status === ReturnStatus.EXPECTED) throw new BadRequestException('Selecione uma situação operacional do retorno');
+        if (dto.status === ReturnStatus.NO_SHOW && !dto.contactAttempt?.trim()) throw new BadRequestException('Registre a tentativa de contato e a justificativa da ausência');
+      }
       if (
         dto.status !== ReturnStatus.NOT_RETURNING &&
         dto.status !== ReturnStatus.NO_SHOW &&
@@ -254,6 +263,10 @@ export class PatientTripsService {
         );
       }
       const now = new Date();
+      if (scope && dto.status === ReturnStatus.NO_SHOW) {
+        await tx.tripObservation.create({ data: { tripId: current.tripId, patientTripId: id, authorId: actorUserId, type: 'CONTACT_ATTEMPT', description: dto.contactAttempt!.trim() } });
+        await tx.tripObservation.create({ data: { tripId: current.tripId, patientTripId: id, authorId: actorUserId, type: 'INCIDENT', description: reason! } });
+      }
       const updated = await tx.patientTrip.update({
         where: { id },
         data: {
@@ -270,7 +283,7 @@ export class PatientTripsService {
         entityType: 'PatientTrip',
         entityId: id,
         reason: dto.reason?.trim(),
-        changes: { before: current.returnStatus, after: dto.status },
+        changes: { before: current.returnStatus, after: dto.status, contactAttemptRecorded: !!scope && dto.status === ReturnStatus.NO_SHOW },
       });
       return updated;
     });
@@ -282,11 +295,17 @@ export class PatientTripsService {
     field: 'outboundStatus',
     status: OutboundStatus,
     action: string,
+    scope?: DriverOperationScope,
   ) {
     return this.prisma.$transaction(async (tx) => {
       await lockOperationalIntegrity(tx);
-      const current = await this.findOrThrow(id, tx);
+      const current = await this.findOrThrow(id, tx, scope);
       if (current.cancelledAt) throw new ConflictException('Participação cancelada não pode ser alterada');
+      if (scope) {
+        this.assertDriverPhase(current.trip, 'OUTBOUND');
+        if (status === OutboundStatus.PLANNED) throw new BadRequestException('Selecione embarque ou ausência na ida');
+      }
+      if (status !== OutboundStatus.BOARDED && current.returnStatus === ReturnStatus.RETURNED) throw new ConflictException('Não é possível desfazer a ida de quem já utilizou o retorno');
       const updated = await tx.patientTrip.update({
         where: { id },
         data: { [field]: status },
@@ -324,9 +343,10 @@ export class PatientTripsService {
   private async findOrThrow(
     id: string,
     client: Prisma.TransactionClient | PrismaService = this.prisma,
+    scope?: DriverOperationScope,
   ) {
     const item = await client.patientTrip.findUnique({
-      where: { id },
+      where: { id, ...(scope && { tripId: scope.tripId, trip: { driver: assignedDriver(scope.userId) } }) },
       select: {
         cancelledAt: true,
         tripId: true,
@@ -335,10 +355,16 @@ export class PatientTripsService {
         confirmationStatus: true,
         outboundStatus: true,
         returnStatus: true,
-        trip: { select: { status: true } },
+        trip: { select: { status: true, actualReturnStartAt: true } },
       },
     });
     if (!item) throw new NotFoundException('Participação não encontrada');
     return item;
+  }
+
+  private assertDriverPhase(trip: { status: TripStatus; actualReturnStartAt: Date | null }, direction: 'OUTBOUND' | 'RETURN', priorNotice = false) {
+    if (trip.status !== TripStatus.IN_PROGRESS) throw new ConflictException('Registros operacionais exigem viagem em andamento');
+    if (direction === 'OUTBOUND' && trip.actualReturnStartAt) throw new ConflictException('A etapa de ida já foi encerrada');
+    if (direction === 'RETURN' && !priorNotice && !trip.actualReturnStartAt) throw new ConflictException('Registre o início do retorno antes do embarque ou ausência no retorno');
   }
 }
