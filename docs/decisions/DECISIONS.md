@@ -96,7 +96,11 @@ ADMIN da Secretaria de Saúde define criticidade/prioridade da consulta. Valores
 
 Cada paciente pode ter estabelecimento diferente. Destino da consulta é contextual à participação/viagem, não atributo permanente do paciente. O ADMIN organiza manualmente a ordem das paradas e aprova a rota; o retorno segue a ordem inversa da ida. Motorista consulta a rota aprovada antes da viagem. Não se exige Waze, navegação curva a curva, trânsito em tempo real ou reotimização no MVP.
 
-**Histórico:** a sugestão simples pelo sistema e a definição da estratégia de sequência estavam previstas anteriormente; foram substituídas pela organização manual e retorno inverso confirmados para a Release 4. A representação técnica das paradas permanece a definir. Conforme decisão de produto registrada abaixo em D-018, não haverá provedor de mapas no MVP.
+**Histórico:** a sugestão simples pelo sistema e a definição da estratégia de sequência estavam previstas anteriormente; foram substituídas pela organização manual e retorno inverso confirmados para a Release 4. Conforme decisão de produto registrada abaixo em D-018, não haverá provedor de mapas no MVP.
+
+**Implementação (26/11/2026):** preservado o modelo existente `TripStop` por direção, com `PatientTrip.outboundStopId` e `returnStopId` (não existe entidade `PatientTripStop` no schema atual). A ida é organizada manualmente; alterações nela sincronizam os locais e vínculos do retorno. A mesma chave `sequence` identifica a posição nos dois sentidos, percorrida em ordem crescente na ida e decrescente no retorno. Horários previstos do retorno são próprios, sem copiar o horário da ida. A aprovação valida o espelhamento e os vínculos dos participantes ativos. Cadastro, edição, exclusão, reordenação e aprovação só ocorrem em `SCHEDULED`.
+
+Alterações de paradas, sequência, endereço ou vínculos invalidam `routeApprovedAt` e o responsável na mesma transação. Inclusão/cancelamento de participação, alteração da consulta e edição do planejamento da viagem também exigem revisão. A sequência e seus vínculos ficam indisponíveis ao motorista até nova aprovação; dados operacionais dos participantes continuam sujeitos à minimização existente. Aprovação e mutações usam o mesmo bloqueio transacional.
 
 ## D-015 — Ponto de embarque
 **Status: CONFIRMED**

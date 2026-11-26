@@ -13,6 +13,7 @@ import { Prisma, TripStatus, VehicleStatus } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { InterruptTripDto, UpdateTripDto } from './dto/update-trip.dto';
+import { assertRouteEditable, assertRouteComplete } from './route-integrity';
 
 const tripSelect = {
   id: true,
@@ -241,6 +242,8 @@ export class TripsService {
           ...(dto.municipalPickupPoint && {
             municipalPickupPoint: dto.municipalPickupPoint,
           }),
+          routeApprovedAt: null,
+          routeApprovedByUserId: null,
           plannedDepartureAt: departure,
           plannedReturnStartAt: returnStart,
         },
@@ -252,7 +255,7 @@ export class TripsService {
         action: 'TRIP_UPDATED',
         entityType: 'Trip',
         entityId: id,
-        changes: { before, after: { ...dto } },
+        changes: { before, after: { ...dto }, routeApprovalInvalidated: true },
       });
 
       return updated;
@@ -397,24 +400,9 @@ export class TripsService {
   /** Aprovação de rota pelo ADMIN (D-014, RN-06). */
   async approveRoute(actorUserId: string, id: string) {
     return this.prisma.$transaction(async (tx) => {
-      const trip = await tx.trip.findUnique({
-        where: { id },
-        select: { id: true, status: true, _count: { select: { stops: true } } },
-      });
-      if (!trip) throw new NotFoundException('Viagem não encontrada');
-      if (
-        trip.status === TripStatus.CANCELLED ||
-        trip.status === TripStatus.INTERRUPTED
-      ) {
-        throw new ConflictException(
-          'Não é possível aprovar rota de viagem cancelada ou interrompida',
-        );
-      }
-      if (trip._count.stops === 0) {
-        throw new BadRequestException(
-          'A viagem não possui paradas cadastradas',
-        );
-      }
+      await lockOperationalIntegrity(tx);
+      await assertRouteEditable(tx, id);
+      await assertRouteComplete(tx, id);
 
       const now = new Date();
       const updated = await tx.trip.update({

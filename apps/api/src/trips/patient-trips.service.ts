@@ -13,6 +13,7 @@ import {
   TripStatus,
 } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { invalidateRoute } from './route-integrity';
 import {
   CreatePatientTripDto,
   UpdatePatientTripDto,
@@ -109,8 +110,9 @@ export class PatientTripsService {
           entityType: 'PatientTrip',
           entityId: created.id,
           reason: dto.priorityJustification.trim(),
-          changes: { tripId, patientId: dto.patientId, priority: dto.priority },
+          changes: { tripId, patientId: dto.patientId, priority: dto.priority, routeApprovalInvalidated: true },
         });
+        await invalidateRoute(tx, tripId);
         return created;
       } catch (error) {
         if (
@@ -130,7 +132,8 @@ export class PatientTripsService {
       if (current.trip.status !== TripStatus.SCHEDULED) throw new ConflictException('Participações só podem ser canceladas antes do início');
       if (current.cancelledAt) throw new ConflictException('Participação já cancelada');
       const updated = await tx.patientTrip.update({ where: { id }, data: { cancelledAt: new Date(), cancelledByUserId: actorUserId, cancellationReason: reason.trim() }, select: patientTripSelect });
-      await this.audit.record(tx, { actorUserId, action: 'PATIENT_TRIP_CANCELLED', entityType: 'PatientTrip', entityId: id, reason: reason.trim() });
+      await invalidateRoute(tx, current.tripId);
+      await this.audit.record(tx, { actorUserId, action: 'PATIENT_TRIP_CANCELLED', entityType: 'PatientTrip', entityId: id, reason: reason.trim(), changes: { routeApprovalInvalidated: true } });
       return updated;
     });
   }
@@ -190,6 +193,7 @@ export class PatientTripsService {
         entityId: id,
         reason: dto.priorityJustification?.trim(),
         changes: {
+          routeApprovalInvalidated: dto.appointmentLocationName !== undefined || dto.appointmentAddress !== undefined || dto.appointmentMunicipality !== undefined || dto.appointmentAt !== undefined,
           before: {
             priority: current.priority,
             confirmationStatus: current.confirmationStatus,
@@ -200,6 +204,7 @@ export class PatientTripsService {
           },
         },
       });
+      if (dto.appointmentLocationName !== undefined || dto.appointmentAddress !== undefined || dto.appointmentMunicipality !== undefined || dto.appointmentAt !== undefined) await invalidateRoute(tx, current.tripId);
       return updated;
     });
   }
@@ -324,6 +329,7 @@ export class PatientTripsService {
       where: { id },
       select: {
         cancelledAt: true,
+        tripId: true,
         id: true,
         priority: true,
         confirmationStatus: true,

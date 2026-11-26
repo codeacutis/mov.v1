@@ -117,6 +117,25 @@ A tela **Participantes e detalhes** centraliza consulta, prioridade, acompanhant
 
 Aplicar a migration `20261126150000_participation_history` antes de executar esta versão.
 
+### Paradas e aprovação da rota
+
+Rotas exclusivas do ADMIN, sob `/trips/:tripId/stops`:
+
+| Método | Caminho relativo | Operação |
+| --- | --- | --- |
+| GET | `/` | Paradas e participantes ativos associados |
+| POST | `/` | Cadastrar parada |
+| PATCH | `/:stopId` | Editar parada com o contrato completo de criação |
+| DELETE | `/:stopId` | Remover parada planejada e desfazer vínculos |
+| PATCH | `/reorder` | `{ direction: "OUTBOUND", stopIds: [...] }`, lista completa em ordem manual |
+| POST | `/rebuild-return` | Sincronizar novamente o retorno inverso a partir da ida |
+
+Alterações da ida sincronizam automaticamente locais e vínculos do retorno. A sequência é crescente na ida e decrescente no retorno. O retorno pode receber previsão de chegada própria; horários da ida não são copiados. Ao mudar o local correspondente, a previsão anterior do retorno é limpa para revisão. A interface seleciona somente participantes ativos desta viagem, usando `patientId` no campo `patients`; os vínculos persistem em `PatientTrip.outboundStopId` e `returnStopId`.
+
+`PATCH /trips/:id/approve-route` valida os dois sentidos e os vínculos de todos os participantes ativos. Somente viagens `SCHEDULED` aceitam mutações e aprovação. Mudanças de paradas, endereços, sequência ou vínculos invalidam aprovação e responsável na mesma transação, com auditoria. Inclusão/cancelamento de participante, alteração de consulta e edição da viagem também invalidam a aprovação. A consulta do motorista usa o mesmo bloqueio transacional e oculta paradas e seus vínculos enquanto não houver nova aprovação.
+
+Não há mapas, GPS ou sugestão automática; a decisão mais recente D-014 substitui a proposta anterior.
+
 
 ### Manuten??o administrativa de motoristas
 

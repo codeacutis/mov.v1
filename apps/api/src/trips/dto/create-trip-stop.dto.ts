@@ -1,14 +1,18 @@
 import { Type } from 'class-transformer';
 import {
   IsEnum,
+  IsArray,
+  ArrayUnique,
+  Matches,
   IsInt,
   IsISO8601,
-  IsNotEmpty,
   IsOptional,
   IsString,
   IsUUID,
   MaxLength,
   Min,
+  Max,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { StopDirection, StopType } from '../../generated/prisma/client';
@@ -24,20 +28,21 @@ export class CreateTripStopDto {
 
   @IsInt()
   @Min(1)
+  @Max(2147483647)
   sequence!: number;
 
   @IsString()
-  @IsNotEmpty()
+  @Matches(/\S/)
   @MaxLength(200)
   name!: string;
 
   @IsString()
-  @IsNotEmpty()
+  @Matches(/\S/)
   @MaxLength(300)
   address!: string;
 
   @IsString()
-  @IsNotEmpty()
+  @Matches(/\S/)
   @MaxLength(100)
   municipality!: string;
 
@@ -53,8 +58,20 @@ export class CreateTripStopDto {
   @MaxLength(500)
   notes?: string;
 
-  @IsOptional()
+  @ValidateIf((_object, value: unknown) => value !== undefined)
+  @IsArray()
+  @ArrayUnique((p: StopPatientDto | null) => p?.patientId)
   @ValidateNested({ each: true })
   @Type(() => StopPatientDto)
   patients?: StopPatientDto[];
+}
+
+export class ReorderTripStopsDto {
+  @IsEnum(StopDirection)
+  direction!: StopDirection;
+
+  @IsArray()
+  @ArrayUnique()
+  @IsUUID(undefined, { each: true })
+  stopIds!: string[];
 }

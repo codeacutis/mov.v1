@@ -138,7 +138,7 @@ describe('Paradas e Acompanhantes (e2e)', () => {
         .get(`/trips/${tripId}/stops`)
         .set(auth())
         .expect(200);
-      expect(res.body).toHaveLength(2);
+      expect(res.body).toHaveLength(4); // Ida e retorno inverso gerado.
       expect(res.body[0].sequence).toBe(1);
       expect(res.body[1].sequence).toBe(2);
     });
@@ -231,6 +231,91 @@ describe('Paradas e Acompanhantes (e2e)', () => {
 
     it('exige autenticação para gerenciar paradas', async () => {
       await request(http).get(`/trips/${tripId}/stops`).expect(401);
+    });
+
+    const stopPayload = (sequence = 1) => ({ direction: 'OUTBOUND', sequence, name: `Local fictício ${sequence}`, address: `Rua fictícia ${sequence}`, municipality: 'Cidade fictícia', stopType: 'APPOINTMENT', patients: sequence === 1 ? [{ patientId }] : [] });
+    const approve = () => request(http).patch(`/trips/${tripId}/approve-route`).set(auth()).expect(200);
+
+    async function assertInvalidated() {
+      const trip = await prisma.trip.findUniqueOrThrow({ where: { id: tripId } });
+      expect(trip.routeApprovedAt).toBeNull();
+      expect(trip.routeApprovedByUserId).toBeNull();
+    }
+
+    it('edita endereço e vínculos, reordena e remove com invalidação persistida', async () => {
+      const first = await request(http).post(`/trips/${tripId}/stops`).set(auth()).send(stopPayload()).expect(201);
+      const second = await request(http).post(`/trips/${tripId}/stops`).set(auth()).send(stopPayload(2)).expect(201);
+      await approve();
+      await request(http).patch(`/trips/${tripId}/stops/${first.body.id}`).set(auth()).send({ ...stopPayload(), address: 'Outro endereço fictício' }).expect(200);
+      await assertInvalidated();
+      await approve();
+      await request(http).patch(`/trips/${tripId}/stops/reorder`).set(auth()).send({ direction: 'OUTBOUND', stopIds: [second.body.id, first.body.id] }).expect(200);
+      await assertInvalidated();
+      const stops = await prisma.tripStop.findMany({ where: { tripId, direction: 'OUTBOUND' }, orderBy: { sequence: 'asc' } });
+      expect(stops.map(s => s.id)).toEqual([second.body.id, first.body.id]);
+      const pt = await prisma.patientTrip.findUniqueOrThrow({ where: { id: patientTripId }, include: { outboundStop: true, returnStop: true } });
+      expect(pt.outboundStop?.sequence).toBe(pt.returnStop?.sequence);
+      expect(pt.returnStop?.address).toBe('Outro endereço fictício');
+      await approve();
+      await request(http).patch(`/trips/${tripId}/stops/${second.body.id}`).set(auth()).send({ ...stopPayload(1), patients: [{ patientId }] }).expect(200);
+      await assertInvalidated();
+      expect((await prisma.patientTrip.findUniqueOrThrow({ where: { id: patientTripId } })).outboundStopId).toBe(second.body.id);
+      await approve();
+      await request(http).delete(`/trips/${tripId}/stops/${first.body.id}`).set(auth()).expect(204);
+      await assertInvalidated();
+      await approve();
+      await request(http).post(`/trips/${tripId}/stops`).set(auth()).send(stopPayload(3)).expect(201);
+      await assertInvalidated();
+    });
+
+    it('não entrega ao motorista a rota invalidada e libera novamente após aprovação', async () => {
+      const created = await request(http).post(`/trips/${tripId}/stops`).set(auth()).send(stopPayload()).expect(201);
+      const login = await request(http).post('/auth/login').send({ email: 'motorista-paradas@teste.local', password: 'senha-ficticia-123' }).expect(200);
+      const driverAuth = { Authorization: `Bearer ${login.body.accessToken}` };
+      await request(http).patch(`/trips/${tripId}/stops/reorder`).set(driverAuth).send({ direction: 'OUTBOUND', stopIds: [created.body.id] }).expect(403);
+      await request(http).patch(`/trips/${tripId}/approve-route`).set(driverAuth).expect(403);
+      await approve();
+      const approved = await request(http).get(`/driver/trips/${tripId}`).set(driverAuth).expect(200);
+      expect(approved.body.stops).toHaveLength(2);
+      await request(http).patch(`/trips/${tripId}/stops/${created.body.id}`).set(auth()).send({ ...stopPayload(), address: 'Endereço alterado fictício' }).expect(200);
+      const hidden = await request(http).get(`/driver/trips/${tripId}`).set(driverAuth).expect(200);
+      expect(hidden.body.routeApprovedAt).toBeNull();
+      expect(hidden.body.stops).toEqual([]);
+      expect(hidden.body.patientTrips[0].outboundStopId).toBeNull();
+      await approve();
+      const refreshed = await request(http).get(`/driver/trips/${tripId}`).set(driverAuth).expect(200);
+      expect(refreshed.body.stops.every((s: { address: string }) => s.address === 'Endereço alterado fictício')).toBe(true);
+    });
+
+    it('rejeita vínculo inválido sem alterar a parada nem perder a aprovação vigente', async () => {
+      const created = await request(http).post(`/trips/${tripId}/stops`).set(auth()).send(stopPayload()).expect(201);
+      await approve();
+      await request(http).patch(`/trips/${tripId}/stops/${created.body.id}`).set(auth()).send({ ...stopPayload(), patients: [{ patientId: '00000000-0000-4000-8000-000000000099' }], address: 'Inválido' }).expect(400);
+      expect((await prisma.tripStop.findUniqueOrThrow({ where: { id: created.body.id } })).address).toBe(stopPayload().address);
+      expect((await prisma.trip.findUniqueOrThrow({ where: { id: tripId } })).routeApprovedAt).not.toBeNull();
+    });
+
+    it('exige vínculos completos e retorno inverso antes de aprovar', async () => {
+      const created = await request(http).post(`/trips/${tripId}/stops`).set(auth()).send({ ...stopPayload(), patients: [] }).expect(201);
+      await request(http).patch(`/trips/${tripId}/approve-route`).set(auth()).expect(400);
+      await request(http).patch(`/trips/${tripId}/stops/${created.body.id}`).set(auth()).send(stopPayload()).expect(200);
+      const back = await prisma.tripStop.findFirstOrThrow({ where: { tripId, direction: 'RETURN' } });
+      await request(http).patch(`/trips/${tripId}/stops/${back.id}`).set(auth()).send({ ...stopPayload(), direction: 'RETURN', address: 'Outra rua' }).expect(200);
+      await request(http).patch(`/trips/${tripId}/approve-route`).set(auth()).expect(400);
+      await request(http).post(`/trips/${tripId}/stops/rebuild-return`).set(auth()).expect(201);
+      await approve();
+    });
+
+    it('bloqueia edição, cadastro, exclusão, reordenação, geração e aprovação após início', async () => {
+      const created = await request(http).post(`/trips/${tripId}/stops`).set(auth()).send(stopPayload()).expect(201);
+      await approve();
+      await request(http).patch(`/trips/${tripId}/start`).set(auth()).expect(200);
+      await request(http).patch(`/trips/${tripId}/stops/${created.body.id}`).set(auth()).send(stopPayload()).expect(409);
+      await request(http).post(`/trips/${tripId}/stops`).set(auth()).send(stopPayload(2)).expect(409);
+      await request(http).delete(`/trips/${tripId}/stops/${created.body.id}`).set(auth()).expect(409);
+      await request(http).patch(`/trips/${tripId}/stops/reorder`).set(auth()).send({ direction: 'OUTBOUND', stopIds: [created.body.id] }).expect(409);
+      await request(http).post(`/trips/${tripId}/stops/rebuild-return`).set(auth()).expect(409);
+      await request(http).patch(`/trips/${tripId}/approve-route`).set(auth()).expect(409);
     });
   });
 
