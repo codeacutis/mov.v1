@@ -16,7 +16,6 @@ const motorista = {
   name: 'Motorista Teste',
   email: 'motorista@teste.local',
   password: PASSWORD,
-  role: 'MOTORISTA',
 };
 
 describe('Autenticação (e2e)', () => {
@@ -34,7 +33,7 @@ describe('Autenticação (e2e)', () => {
     await bootstrap().expect(201);
     const adminToken = await tokenOf(admin.email);
     await request(http)
-      .post('/users')
+      .post('/drivers')
       .set(auth(adminToken))
       .send(motorista)
       .expect(201);
@@ -79,6 +78,25 @@ describe('Autenticação (e2e)', () => {
   });
 
   describe('cadastro', () => {
+    it('recusa MOTORISTA em /users sem persistir conta ou auditoria', async () => {
+      await bootstrap().expect(201);
+      const token = await tokenOf(admin.email);
+      await request(http).post('/users').set(auth(token))
+        .send({ ...motorista, role: 'MOTORISTA' }).expect(400);
+      expect(await prisma.user.count({ where: { email: motorista.email } })).toBe(0);
+      expect(await prisma.driver.count()).toBe(0);
+      expect(await prisma.auditLog.count({ where: { action: 'USER_CREATED' } })).toBe(0);
+    });
+
+    it('cria MOTORISTA e v?nculo ?nico pelo cadastro de motoristas', async () => {
+      await setupAdminAndDriver();
+      const user = await prisma.user.findUniqueOrThrow({ where: { email: motorista.email }, include: { driver: true } });
+      expect(user.role).toBe('MOTORISTA');
+      expect(user.driver?.userId).toBe(user.id);
+      expect(await prisma.driver.count({ where: { userId: user.id } })).toBe(1);
+      expect(await prisma.auditLog.count({ where: { action: 'DRIVER_CREATED' } })).toBe(1);
+    });
+
     it('armazena a senha como hash bcrypt e nunca a devolve', async () => {
       const res = await bootstrap().expect(201);
       expect(JSON.stringify(res.body)).not.toMatch(
@@ -115,7 +133,7 @@ describe('Autenticação (e2e)', () => {
 
     it('somente ADMIN cadastra usuários; MOTORISTA recebe 403 e anônimo 401', async () => {
       const { driverToken } = await setupAdminAndDriver();
-      const body = { ...motorista, email: 'novo@teste.local' };
+      const body = { ...motorista, email: 'novo@teste.local', role: 'ADMIN' };
       await request(http).post('/users').send(body).expect(401);
       await request(http)
         .post('/users')
@@ -127,7 +145,7 @@ describe('Autenticação (e2e)', () => {
     it('rejeita e-mail duplicado (mesmo com caixa diferente), senha curta e campos extras', async () => {
       const { adminToken } = await setupAdminAndDriver();
       const post = (b: object) =>
-        request(http).post('/users').set(auth(adminToken)).send(b);
+        request(http).post('/users').set(auth(adminToken)).send({ ...motorista, role: 'ADMIN', ...b });
       await post({ ...motorista, email: 'MOTORISTA@teste.local' }).expect(409);
       await post({
         ...motorista,
@@ -148,10 +166,12 @@ describe('Autenticação (e2e)', () => {
 
     it('audita o cadastro sem registrar dados pessoais', async () => {
       const { adminToken } = await setupAdminAndDriver();
+      await request(http).post('/users').set(auth(adminToken))
+        .send({ ...admin, email: 'segundo-admin@teste.local', role: 'ADMIN' }).expect(201);
       const log = await prisma.auditLog.findFirstOrThrow({
         where: { action: 'USER_CREATED' },
       });
-      expect(log.changes).toEqual({ role: 'MOTORISTA' });
+      expect(log.changes).toEqual({ role: 'ADMIN' });
       expect(JSON.stringify(log)).not.toContain(motorista.email);
       expect(adminToken).toBeDefined();
     });
