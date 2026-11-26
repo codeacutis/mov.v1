@@ -7,6 +7,8 @@ import { TripsController } from './trips.controller';
 import { TripsService } from './trips.service';
 import { PatientTripsController } from './patient-trips.controller';
 import { PatientTripsService } from './patient-trips.service';
+import { AnalyticsController } from './analytics.controller';
+import { AnalyticsService } from './analytics.service';
 
 @Module({
   controllers: [
@@ -14,12 +16,14 @@ import { PatientTripsService } from './patient-trips.service';
     TripStopsController,
     CompanionsController,
     PatientTripsController,
+    AnalyticsController,
   ],
   providers: [
     TripsService,
     TripStopsService,
     CompanionsService,
     PatientTripsService,
+    AnalyticsService,
   ],
   exports: [TripsService, PatientTripsService],
 })

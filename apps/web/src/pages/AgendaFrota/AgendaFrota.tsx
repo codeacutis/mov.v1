@@ -44,12 +44,12 @@ const STATUS_CSS: Record<Situacao, string> = {
   SCHEDULED: 'agendada',
   IN_PROGRESS: 'andamento',
   COMPLETED: 'concluida',
-  CANCELLED: 'concluida',
-  INTERRUPTED: 'concluida',
+  CANCELLED: 'cancelada',
+  INTERRUPTED: 'interrompida',
   IN_MAINTENANCE: 'manutencao',
 };
 
-const DIAS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const DIAS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 function segundaDaSemana(ref: Date, delta: number): Date {
   const diff = (ref.getDay() + 6) % 7;
@@ -65,7 +65,7 @@ function mesmoDia(a: Date, b: Date): boolean {
 }
 
 function tituloSemana(inicio: Date): string {
-  const fim = somarDias(inicio, 5);
+  const fim = somarDias(inicio, 6);
   const mes = (d: Date) => d.toLocaleDateString('pt-BR', { month: 'long' });
   return inicio.getMonth() === fim.getMonth()
     ? `${inicio.getDate()} a ${fim.getDate()} de ${mes(fim)} de ${fim.getFullYear()}`
@@ -86,14 +86,16 @@ export default function AgendaFrota({ onNavegar, onSair }: AgendaFrotaProps) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    Promise.all([
-      apiRequest<{ data: Trip[] }>('/trips'),
-      apiRequest<{ data: Vehicle[] }>('/vehicles'),
-    ]).then(([t, v]) => {
-      setTrips(t.data);
-      setVehicles(v.data);
-    }).catch(cause => setError(apiErrorMessage(cause))).finally(() => setLoading(false));
-  }, []);
+    const controller = new AbortController();
+    const start = segundaDaSemana(new Date(), semana);
+    const params = new URLSearchParams({ start: start.toISOString(), end: somarDias(start, 7).toISOString() });
+    setLoading(true); setError('');
+    apiRequest<{ trips: Trip[]; vehicles: Vehicle[] }>(`/analytics/agenda?${params}`, { signal: controller.signal })
+      .then(result => { setTrips(result.trips); setVehicles(result.vehicles); })
+      .catch(cause => { if (!controller.signal.aborted) setError(apiErrorMessage(cause)); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
+    return () => controller.abort();
+  }, [semana]);
 
   const hoje = new Date();
   const inicio = segundaDaSemana(hoje, semana);
@@ -106,7 +108,6 @@ export default function AgendaFrota({ onNavegar, onSair }: AgendaFrotaProps) {
   function tripsNoCelula(vehicleId: string, dia: Date): Trip[] {
     return trips.filter((t) => {
       if (!t.vehicle || t.vehicle.id !== vehicleId) return false;
-      if (t.status === 'CANCELLED') return false;
       return mesmoDia(new Date(t.plannedDepartureAt), dia);
     });
   }
@@ -179,19 +180,15 @@ export default function AgendaFrota({ onNavegar, onSair }: AgendaFrotaProps) {
                   <tr key={v.id}>
                     <th scope="row" className="agenda__veiculo">
                       {v.plate}
-                      {v.status === 'IN_MAINTENANCE' && <small>Manutenção</small>}
+                      {v.status === 'IN_MAINTENANCE' && <small>Em manutenção atualmente</small>}
                     </th>
                     {datas.map((d, i) => {
                       const celTrips = tripsNoCelula(v.id, d);
-                      const emManutencao = v.status === 'IN_MAINTENANCE';
                       return (
                         <td
                           key={i}
                           className={mesmoDia(d, hoje) ? 'agenda__celula agenda__celula--hoje' : 'agenda__celula'}
                         >
-                          {emManutencao && celTrips.length === 0 && (
-                            <span className="evento evento--manutencao">Manutenção</span>
-                          )}
                           {celTrips.map((t) => (
                             <button
                               key={t.id}
@@ -200,7 +197,7 @@ export default function AgendaFrota({ onNavegar, onSair }: AgendaFrotaProps) {
                               aria-pressed={t.id === selecionado}
                               onClick={() => setSelecionado(t.id === selecionado ? null : t.id)}
                             >
-                              <b>{formatTime(t.plannedDepartureAt)}</b> {t.municipalPickupPoint}
+                              <b>{formatTime(t.plannedDepartureAt)}</b> {t.municipalPickupPoint} · {ROTULOS[t.status]}
                             </button>
                           ))}
                         </td>
@@ -210,7 +207,7 @@ export default function AgendaFrota({ onNavegar, onSair }: AgendaFrotaProps) {
                 ))}
                 {veiculosFiltrados.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="texto-suave" style={{ padding: 16 }}>
+                    <td colSpan={8} className="texto-suave" style={{ padding: 16 }}>
                       Nenhum veículo cadastrado.
                     </td>
                   </tr>
@@ -220,7 +217,7 @@ export default function AgendaFrota({ onNavegar, onSair }: AgendaFrotaProps) {
           </div>
 
           <ul className="legenda" aria-label="Legenda">
-            {(['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'IN_MAINTENANCE'] as Situacao[]).map((s) => (
+            {(['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'INTERRUPTED'] as Situacao[]).map((s) => (
               <li key={s}>
                 <span className={`legenda__cor evento--${STATUS_CSS[s]}`} aria-hidden="true" />
                 {ROTULOS[s]}
@@ -230,7 +227,7 @@ export default function AgendaFrota({ onNavegar, onSair }: AgendaFrotaProps) {
         </section>
       )}
 
-      <section className="cartao" style={{ marginTop: 16 }} aria-live="polite">
+      {!loading && !error && <section className="cartao" style={{ marginTop: 16 }} aria-live="polite">
         {tripSelecionada ? (
           <>
             <h2 className="cartao__titulo">
@@ -251,7 +248,7 @@ export default function AgendaFrota({ onNavegar, onSair }: AgendaFrotaProps) {
             Clique em uma viagem da agenda para ver os detalhes.
           </p>
         )}
-      </section>
+      </section>}
     </AppLayout>
   );
 }
