@@ -10,11 +10,11 @@ Papéis confirmados:
 ## 2. Pacientes
 Mantém o cadastro mínimo necessário para identificação e contato. Não é um prontuário eletrônico.
 
-Dados propostos:
-- nome;
-- data de nascimento;
-- telefone ou contato alternativo;
-- CPF opcional, sujeito à confirmação de necessidade;
+Dados do cadastro:
+- nome obrigatório;
+- data de nascimento obrigatória;
+- telefone obrigatório;
+- CPF opcional;
 - Cartão SUS opcional;
 - endereço opcional;
 - indicadores operacionais de acessibilidade/embarque;
@@ -29,7 +29,7 @@ Cada motorista possui cadastro operacional `Driver` e conta individual `User`, e
 Gerencia veículos, capacidade, situação e disponibilidade. Veículo inativo ou em manutenção não pode ser alocado.
 
 ## 5. Viagens
-Representa a operação municipal de ida e volta. Contém horário fixo planejado de saída, horário fixo planejado de início do retorno, motorista, veículo e estado geral.
+Representa a operação municipal de ida e volta. Contém horário fixo planejado de saída, horário fixo planejado de início do retorno, chegada prevista ao município de origem, motorista, veículo e estado geral. A chegada prevista encerra a ocupação planejada do veículo.
 
 ## 6. Participação do paciente
 `PatientTrip` representa a inclusão de um paciente em uma viagem. É o local dos dados contextuais daquela participação:
@@ -43,7 +43,7 @@ Representa a operação municipal de ida e volta. Contém horário fixo planejad
 A mesma pessoa pode ter prioridades e confirmações diferentes em viagens distintas.
 
 ## 7. Paradas e rota
-`TripStop` representa cada parada física na rota, com sequência e endereço. O MVP não exige navegação em tempo real. O sistema pode sugerir uma ordem simples e o administrador aprova.
+`TripStop` representa cada parada física na rota, com sequência e endereço. O MVP não exige navegação em tempo real. O ADMIN organiza manualmente e aprova a ordem; o retorno segue a ordem inversa da ida.
 
 A rota precisa contemplar:
 - saída do ponto municipal;

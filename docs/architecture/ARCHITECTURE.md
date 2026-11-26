@@ -41,12 +41,12 @@ A divisão em módulos deve refletir os limites de domínio, não necessariament
 
 ### 4.1 Planejamento ------
 1. Administrador cadastra ou seleciona pacientes.
-2. Cria uma viagem com horário fixo de saída municipal e horário fixo de início do retorno.
+2. Cria uma viagem com horário fixo de saída municipal, horário fixo de início do retorno e chegada prevista ao município de origem, fim planejado da ocupação do veículo.
 3. Designa motorista e veículo.
 4. Adiciona pacientes e acompanhantes.
 5. Define prioridade de cada participação.
 6. Informa o estabelecimento/consulta de cada paciente.
-7. Sistema apresenta uma sequência simples sugerida para as paradas; administrador revisa e aprova.
+7. Administrador organiza manualmente e aprova as paradas; o retorno segue a ordem inversa da ida.
 8. Sistema solicita confirmações automáticas pelo WhatsApp, quando a integração estiver habilitada.
 
 ### 4.2 Ida
@@ -59,8 +59,8 @@ A divisão em módulos deve refletir os limites de domínio, não necessariament
 1. O retorno começa no horário fixo definido na viagem.
 2. Motorista percorre a rota de recolhimento.
 3. Se o paciente tiver informado previamente que não retornará, a participação fica marcada como `NOT_RETURNING`.
-4. Se não houver comunicação prévia e o paciente não estiver disponível, o motorista deve aguardar e pode utilizar os contatos cadastrados para falar com paciente ou acompanhante.
-5. Se a situação indicar que não é para aguardar, o motorista segue a viagem normalmente, registrando a ocorrência e a orientação recebida conforme política operacional a definir.
+4. Se o paciente estiver ausente, o motorista tenta contato com paciente ou acompanhante.
+5. O motorista pode prosseguir após registrar ocorrência e justificativa.
 6. Backend registra o encerramento real da viagem.
 
 ### 4.4 Interrupção
@@ -78,9 +78,8 @@ Uma viagem iniciada que não possa ser concluída normalmente deve ser marcada c
 
 ## 6. Decisões ainda pendentes
 
-- Provedor de geocodificação/roteirização e sua política de custos.
 - Regras de timeout/tempo máximo de espera no retorno.
-- Como o motorista recebe a orientação quando a pessoa está ausente e não deve ser aguardada.
+- Escolha do provedor de e-mail para recuperação de senha.
 - Política de autenticação e duração de sessão/token.
 - Política de retenção e descarte de dados.
 - Ambiente definitivo de produção e requisitos operacionais da Secretaria.

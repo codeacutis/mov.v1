@@ -28,10 +28,10 @@
 
 ### Patient
 - `id`
-- `name`
-- `birthDate`
-- `phone` e/ou contato alternativo (**PENDING** obrigatoriedade)
-- `cpf` opcional (**PENDING** necessidade)
+- `name` obrigatório
+- `birthDate` obrigatório
+- `phone` obrigatório
+- `cpf` opcional
 - `susCardNumber` opcional
 - endereço opcional
 - indicadores operacionais: `usesWheelchair`, `hasReducedMobility`, `needsBoardingAssistance`
@@ -48,6 +48,7 @@ Idade deve ser calculada a partir de `birthDate`; não persistir idade como dado
 - `municipalPickupPoint` ou referência a ponto cadastrado
 - `plannedDepartureAt`
 - `plannedReturnStartAt` (horário fixo de início do percurso de retorno)
+- horário previsto de chegada ao município de origem (fim planejado da ocupação; nome técnico a definir)
 - `actualDepartureAt`
 - `actualReturnAt`
 - `status`: `SCHEDULED | IN_PROGRESS | COMPLETED | CANCELLED | INTERRUPTED`
@@ -93,7 +94,7 @@ Para novos registros pela API, `NOT_RETURNING` representa aviso prévio e `NO_SH
 - `plannedArrivalAt` opcional
 - `notes` operacionais não sensíveis
 
-**PENDING:** confirmar se uma parada representa um estabelecimento físico e se a mesma parada é usada para desembarque na ida e embarque na volta. A modelagem deve permitir a sequência de ida e a sequência de retorno, que podem ser inversas ou diferentes.
+O ADMIN organiza e aprova a sequência de ida; o retorno segue a ordem inversa. **PENDING:** representação técnica das paradas e do uso da mesma parada nos dois sentidos. Estabelecimentos podem ser compartilhados entre participações.
 
 ### TripCompanion
 - `id`
@@ -145,7 +146,7 @@ Usada para registrar ausência no retorno e outras observações operacionais se
 ## Integridade e regras
 
 - Não permitir sobreposição de viagens para o mesmo motorista ou veículo.
-- Considerar o intervalo total da operação, da saída até o retorno planejado/real.
+- Para a ocupação planejada do veículo, considerar da saída municipal à chegada prevista ao município de origem. A adequação da implementação existente permanece pendente.
 - Veículo inativo ou em manutenção não pode ser alocado.
 - Total de passageiros = pacientes + acompanhantes; motorista não entra na capacidade.
 - Impedir duplicidade do mesmo paciente na mesma viagem, salvo decisão explícita em contrário.
@@ -157,8 +158,8 @@ Usada para registrar ausência no retorno e outras observações operacionais se
 
 ## Pontos que exigem validação antes das migrations
 
-1. Campos obrigatórios definitivos de Patient.
-2. Modelagem de uma parada usada em dois sentidos ou duas sequências independentes.
+1. Detalhes de validação dos campos de Patient não definidos pela decisão da Release 4.
+2. Representação técnica de uma parada usada nos dois sentidos, respeitada a ordem inversa confirmada.
 3. Política para mais de um acompanhante por paciente.
 4. Política para paciente que não embarca na ida.
 5. Cardinalidade e unicidade dos registros de confirmação.

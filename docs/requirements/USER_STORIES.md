@@ -2,14 +2,14 @@
 
 ## Administração
 
-- **US-01:** Como ADMIN, quero cadastrar pacientes para organizar o transporte.
+- **US-01:** Como ADMIN, quero cadastrar pacientes com nome, data de nascimento e telefone obrigatórios e CPF opcional para organizar o transporte.
 - **US-02:** Como ADMIN, quero cadastrar e consultar veículos, editar seus dados e inativá-los para manter a frota atualizada sem perder o histórico.
-- **US-03:** Como ADMIN, quero criar uma viagem com horários fixos de ida e retorno.
+- **US-03:** Como ADMIN, quero criar uma viagem com horários de saída, início do retorno e chegada prevista ao município de origem para planejar a ocupação.
 - **US-04:** Como ADMIN, quero alocar motorista e veículo sem conflitos de agenda.
 - **US-05:** Como ADMIN, quero adicionar pacientes e acompanhantes respeitando a capacidade.
 - **US-06:** Como ADMIN, quero registrar estabelecimento e horário da consulta de cada paciente.
 - **US-07:** Como ADMIN, quero definir prioridade para organizar as demandas.
-- **US-08:** Como ADMIN, quero visualizar e aprovar a sequência de paradas.
+- **US-08:** Como ADMIN, quero organizar manualmente e aprovar a sequência de paradas, com retorno em ordem inversa.
 - **US-09:** Como ADMIN, quero acompanhar confirmações de presença e não respostas.
 - **US-10:** Como ADMIN, quero alterar horário planejado antes do início e manter histórico.
 - **US-11:** Como ADMIN, quero cancelar uma viagem ainda não iniciada.
@@ -23,7 +23,7 @@
 - **US-16:** Como MOTORISTA, quero registrar embarque e ausência na ida.
 - **US-17:** Como MOTORISTA, quero registrar que um paciente não retornará, quando comunicado previamente.
 - **US-18:** Como MOTORISTA, quero consultar os contatos de paciente/acompanhante para tratar uma ausência no recolhimento.
-- **US-19:** Como MOTORISTA, quero registrar tentativa de contato, espera e ocorrência no retorno.
+- **US-19:** Como MOTORISTA, quero tentar contato com o paciente ausente e registrar ocorrência e justificativa para poder prosseguir no retorno.
 - **US-20:** Como MOTORISTA, quero finalizar a viagem e registrar o horário real automaticamente.
 
 ## Paciente/acompanhante e notificações

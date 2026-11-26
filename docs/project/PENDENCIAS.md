@@ -1,6 +1,6 @@
 # Pendências
 
-Atualizado em 18/11/2026, após as entregas de **recuperação de senha** e **revisão de autorização**. Itens marcados como *bloqueante* impedem uso real da funcionalidade; os demais são evoluções ou riscos conhecidos.
+Atualizado em 26/11/2026 com as decisões da Release 4; o histórico de implementação abaixo não foi revalidado nesta atualização documental. Itens marcados como *bloqueante* impedem uso real da funcionalidade; os demais são evoluções ou riscos conhecidos.
 
 Legenda: 🔴 bloqueante · 🟠 importante · 🟡 evolução
 
@@ -27,9 +27,9 @@ Legenda: 🔴 bloqueante · 🟠 importante · 🟡 evolução
 
 | | Pendência | Detalhe |
 |---|---|---|
-| 🔴 | **Fim planejado da ocupação** | As operações de agenda e lotação usam bloqueio transacional compartilhado no PostgreSQL, mas o intervalo ainda termina no *início do retorno*, não no fim da operação. O responsável pelo produto deve definir o marco de fim planejado antes de alterar o modelo e a validação. Até então a agenda não protege toda a operação municipal. |
+| 🔴 | **Fim planejado da ocupação** | As operações de agenda e lotação usam bloqueio transacional compartilhado no PostgreSQL, mas o intervalo ainda termina no *início do retorno*. A Release 4 confirmou a chegada prevista ao município de origem como fim planejado; é necessário adequar modelo e validação. Até então a agenda não protege toda a operação municipal. |
 | 🟠 | Capacidade e participantes | A inclusão, troca de veículo e redução de capacidade usam o mesmo bloqueio transacional. Novos caminhos de escrita que afetem lotação ou agenda devem aderir ao protocolo; escritas diretas no banco não são protegidas pelo bloqueio consultivo. |
-| 🟡 | Paradas e rota | Modelo de sequências ida/volta e aprovação ainda dependem de decisão (DATA_MODEL "pontos que exigem validação"). |
+| 🟡 | Paradas e rota | A organização manual, aprovação e ordem inversa no retorno foram confirmadas; a representação técnica e eventuais adequações permanecem pendentes. |
 
 ## 4. Deploy (D-019)
 
