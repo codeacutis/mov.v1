@@ -38,7 +38,7 @@ A operação é modelada como **uma viagem municipal de ida e volta**: horário 
 - Criação de viagens com alocação sem conflito de agenda
 - Participantes, acompanhantes e controle de capacidade do veículo
 - Prioridade administrativa (`HIGH` / `MEDIUM` / `LOW`) por participação
-- Sugestão simples de sequência de paradas, com revisão e aprovação do ADMIN
+- Organização manual e aprovação das paradas pelo ADMIN, com retorno em ordem inversa (decisão da Release 4)
 - Início e encerramento com horários gerados no servidor
 - Cancelamento antes do início e interrupção após o início
 - Confirmação automática por WhatsApp (integração oficial; mock no início do desenvolvimento)
@@ -147,7 +147,7 @@ O frontend consome a API REST e **não duplica** regras críticas de negócio.
 - Seeds e cadastros de desenvolvimento devem ser fictícios
 - Não versionar `.env` nem credenciais
 - WhatsApp deve poder ser mockado; não depende da Meta para desenvolver regras de domínio
-- Geocodificação/roteirização avançada ainda não está definida; o MVP pode operar com endereços e sequência aprovada manualmente
+- O MVP utiliza sequência organizada e aprovada manualmente, sem provedor de mapas
 
 ## Documentação
 
@@ -170,9 +170,9 @@ O frontend consome a API REST e **não duplica** regras críticas de negócio.
 
 A API conta com autenticação, sessões, recuperação de senha, cadastros operacionais, planejamento e execução administrativa de viagens, paradas, participações individuais e acompanhantes. O motorista consulta viagens atribuídas com dados operacionais limitados. A interface React contém telas de login, recuperação de senha, cadastros, viagens, paradas e acompanhamento da operação.
 
-O administrador gerencia participações pela API conforme o [contrato de PatientTrip](apps/api/README.md#participações-em-viagens). A integração produtiva de WhatsApp e a política de espera no recolhimento ainda dependem de decisões.
+O administrador gerencia participações pela API conforme o [contrato de PatientTrip](apps/api/README.md#participações-em-viagens). As decisões da Release 4 ainda exigem adequação do sistema; a integração produtiva de WhatsApp ainda depende de definições.
 
-Pendências conhecidas incluem campos obrigatórios do paciente, política de espera no retorno, provedor de mapas/rotas, política de autenticação/retenção e avaliação formal antes de qualquer uso com dados reais. O detalhamento está em [`docs/decisions/DECISIONS.md`](docs/decisions/DECISIONS.md) e [`docs/project/ROADMAP.md`](docs/project/ROADMAP.md).
+Pendências conhecidas incluem o limite de espera no retorno, o provedor de e-mail para recuperação de senha, política de autenticação/retenção e avaliação formal antes de qualquer uso com dados reais. O detalhamento está em [`docs/decisions/DECISIONS.md`](docs/decisions/DECISIONS.md) e [`docs/project/ROADMAP.md`](docs/project/ROADMAP.md).
 
 
 ## Segurança e privacidade

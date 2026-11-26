@@ -1,6 +1,6 @@
 # Registro de decisões — Mov+
 
-Última consolidação: 12/11/2026.
+Última consolidação: 26/11/2026 (decisões do Product Owner para a Release 4).
 
 Legenda:
 - **CONFIRMED:** explicitamente decidido.
@@ -56,7 +56,7 @@ Capacidade do veículo considera pacientes e acompanhantes; motorista não conta
 
 Nome obrigatório; data de nascimento em vez de idade; idade calculada. Endereço opcional. Cartão SUS opcional. Não coletar tipo sanguíneo. Evitar diagnóstico e dados clínicos desnecessários. Utilizar indicadores operacionais objetivos de acessibilidade/embarque e observação limitada.
 
-**PENDING:** obrigatoriedade de telefone/contato, necessidade de CPF e campos finais do cadastro.
+**Histórico:** a obrigatoriedade de telefone/contato e a necessidade de CPF estavam pendentes. Na Release 4, o Product Owner confirmou nome, data de nascimento e telefone como obrigatórios e CPF como opcional. Demais campos não definidos continuam sujeitos às decisões existentes.
 
 **Confirmado pelo produto:** nome e telefone são obrigatórios para acompanhante. Cada PatientTrip aceita no máximo um acompanhante.
 
@@ -87,9 +87,9 @@ ADMIN da Secretaria de Saúde define criticidade/prioridade da consulta. Valores
 ## D-014 — Paradas e sequência de rota
 **Status: CONFIRMED**
 
-Cada paciente pode ter estabelecimento diferente. Destino da consulta é contextual à participação/viagem, não atributo permanente do paciente. Sistema apresenta sequência simples sugerida; ADMIN revisa e aprova. Motorista consulta a rota aprovada antes da viagem. Não se exige Waze, navegação curva a curva, trânsito em tempo real ou reotimização no MVP.
+Cada paciente pode ter estabelecimento diferente. Destino da consulta é contextual à participação/viagem, não atributo permanente do paciente. O ADMIN organiza manualmente a ordem das paradas e aprova a rota; o retorno segue a ordem inversa da ida. Motorista consulta a rota aprovada antes da viagem. Não se exige Waze, navegação curva a curva, trânsito em tempo real ou reotimização no MVP.
 
-**PENDING:** provedor geográfico, se necessário; estratégia de sequência e representação separada das sequências de ida e retorno.
+**Histórico:** a sugestão simples pelo sistema e a definição da estratégia de sequência estavam previstas anteriormente; foram substituídas pela organização manual e retorno inverso confirmados para a Release 4. A representação técnica das paradas permanece a definir. Conforme decisão de produto registrada abaixo em D-018, não haverá provedor de mapas no MVP.
 
 ## D-015 — Ponto de embarque
 **Status: CONFIRMED**
@@ -109,11 +109,11 @@ Paciente pode utilizar o transporte na ida e não retornar no veículo municipal
 ## D-018 — Paciente ausente no recolhimento
 **Status: CONFIRMED**
 
-Se não houver comunicação prévia de ausência/não retorno, motorista deve aguardar a chegada/disponibilidade do paciente. Pode utilizar os contatos cadastrados na participação para contatar paciente ou acompanhante e entender a situação. Se houver orientação/situação que indique que não deve aguardar, segue a viagem normalmente, registrando ocorrência.
+**Release 4 — CONFIRMED:** se o paciente estiver ausente no recolhimento, o motorista tenta contato com paciente ou acompanhante e pode prosseguir após registrar ocorrência e justificativa. Não há desistência ou remoção automática por falta de resposta.
 
-**PENDING:** definir limite de espera, procedimento para ausência sem contato, quem autoriza seguir e como registrar a orientação. Não implementar timeout arbitrário sem decisão da Secretaria.
+**Histórico — substituído na Release 4:** anteriormente previa-se aguardar a chegada/disponibilidade e seguir mediante orientação ou situação que indicasse não aguardar; estavam pendentes o procedimento sem contato e quem autorizaria seguir. A nova decisão permite ao motorista prosseguir após tentativa de contato, ocorrência e justificativa. Limite de espera e detalhes não especificados permanecem pendentes; não estabelecer timeout arbitrário.
 
-**Implementação atual:** o ADMIN pode documentar a ausência constatada como `NO_SHOW`, com motivo obrigatório e identificação do registro. Esse lançamento é distinto do aviso prévio `NOT_RETURNING`. A política operacional de espera e autorização continua pendente.
+**Implementação atual:** o ADMIN pode documentar a ausência constatada como `NO_SHOW`, com motivo obrigatório e identificação do registro. Esse lançamento é distinto do aviso prévio `NOT_RETURNING`. A atuação do motorista conforme a Release 4 ainda depende de implementação.
 
 **Confirmado pelo produto:** sem aviso prévio e sem contato, o motorista registra uma observação da viagem e segue o caminho. O retorno só pode ser utilizado por paciente que tenha embarcado na ida.
 
@@ -134,10 +134,12 @@ Alterações relevantes de prioridade, horários, alocação, cancelamento/inter
 
 Não permitir sobreposição de viagens para o mesmo motorista ou veículo. A proteção deve suportar requisições concorrentes, não apenas uma validação simples na interface.
 
+**Release 4 — CONFIRMED:** adicionar à viagem o horário previsto de chegada ao município de origem, como fim planejado da ocupação do veículo. O intervalo planejado começa na saída municipal. A implementação atual ainda utiliza o início do retorno como fim do intervalo e deve ser adequada; a decisão não altera retroativamente o código.
+
 ## D-022 — Otimização avançada de rota
 **Status: PROPOSED / FUTURO**
 
-Não implementar inicialmente otimização avançada do tipo VRP com janelas de tempo. Começar com sugestão simples e aprovação administrativa. Evoluir após validar regras e dados operacionais.
+Não implementar inicialmente otimização avançada do tipo VRP com janelas de tempo. A proposta anterior de começar com sugestão simples foi substituída pela organização manual e aprovação pelo ADMIN (D-014, Release 4). Evoluções permanecem propostas, não confirmadas.
 
 ## D-023 — Autenticação (sessão no servidor + JWT)
 **Status: PROPOSED** (política de sessão/token segue PENDING em `ARCHITECTURE.md` §6)
@@ -159,6 +161,7 @@ Não implementar inicialmente otimização avançada do tipo VRP com janelas de 
 - **Efeitos da redefinição:** troca o hash da senha (bcrypt, mesma política de 10–72 caracteres), **revoga todas as sessões** do usuário e invalida outros tokens pendentes. Senha fraca é recusada sem consumir o token.
 - **Auditoria:** `PASSWORD_RESET_REQUESTED` e `PASSWORD_RESET_COMPLETED`, sem token nem senha.
 - **PENDING — entrega do link:** não há provedor de e-mail escolhido. A entrega passa pela abstração `PasswordResetNotifier` (como o WhatsApp). A implementação padrão **não envia nada**; só em desenvolvimento, com `PASSWORD_RESET_DEV_LOG=true`, imprime o link no console. Antes de produção é preciso decidir provedor, custo e política de contato.
+- **Release 4:** o Product Owner mantém pendente a escolha do provedor de e-mail; esta indicação não confirma os demais itens propostos de D-024.
 - **Não incluído:** tela no front (`/redefinir-senha`), limite de tentativas por IP, limpeza periódica de tokens expirados.
 
 ## D-025 — Autorização fail-closed e rotas do motorista

@@ -13,9 +13,12 @@ Separar o que é necessário para uma demonstração acadêmica do que represent
 - [x] Horários fixos de saída e início do retorno.
 - [x] Participação individual com estados separados de ida e volta.
 - [x] Confirmação automática por WhatsApp como comportamento desejado.
-- [ ] Definir campos obrigatórios de paciente.
-- [ ] Definir política de espera e escalonamento no retorno.
-- [ ] Definir modelo final das sequências de ida e retorno.
+- [x] Definir nome, data de nascimento e telefone obrigatórios e CPF opcional para paciente.
+- [x] Definir tentativa de contato e possibilidade de prosseguir após ocorrência e justificativa no retorno.
+- [x] Definir organização manual e aprovação da rota pelo ADMIN, com retorno inverso.
+- [x] Definir chegada prevista ao município de origem como fim planejado da ocupação do veículo.
+- [ ] Definir limite de espera e representação técnica das paradas.
+- [ ] Escolher provedor de e-mail para recuperação de senha.
 - [ ] Definir política de retenção e segurança para produção.
 
 ## Fase 1 — Base técnica
@@ -33,7 +36,7 @@ Separar o que é necessário para uma demonstração acadêmica do que represent
 - Capacidade do veículo.
 - Registro de consultas/estabelecimentos.
 - Prioridade administrativa.
-- Sequência simples de paradas e aprovação.
+- Organização manual de paradas, aprovação e retorno em ordem inversa.
 - Visão da viagem para motorista.
 - Início/finalização com horários do servidor.
 - Estados independentes de ida e volta.

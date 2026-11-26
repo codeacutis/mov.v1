@@ -9,15 +9,15 @@ Apoiar a Secretaria Municipal de Saúde na organização do transporte de pacien
 - **RF-01 — Autenticação:** permitir acesso por conta individual.
 - **RF-02 — Papéis:** distinguir ADMIN e MOTORISTA.
 - **RF-03 — Usuários/motoristas:** manter vínculo 1:1 entre conta de motorista e cadastro operacional.
-- **RF-04 — Pacientes:** cadastrar e manter dados mínimos necessários.
+- **RF-04 — Pacientes:** cadastrar e manter nome, data de nascimento e telefone obrigatórios; CPF é opcional.
 - **RF-05 — Veículos:** permitir ao ADMIN cadastrar, consultar, editar e inativar veículos; validar capacidade positiva e situação operacional, mantendo histórico por inativação lógica.
-- **RF-06 — Viagens:** criar viagem de ida e volta com saída municipal e início de retorno planejados.
+- **RF-06 — Viagens:** criar viagem de ida e volta com saída municipal, início do retorno e chegada prevista ao município de origem planejados.
 - **RF-07 — Alocação:** designar um motorista e um veículo por viagem.
 - **RF-08 — Participantes:** adicionar pacientes à viagem e registrar acompanhantes.
 - **RF-09 — Capacidade:** impedir lotação acima da capacidade, contando pacientes e acompanhantes.
 - **RF-10 — Consulta:** registrar estabelecimento, endereço e horário de consulta por participação.
 - **RF-11 — Prioridade:** permitir ao ADMIN classificar prioridade HIGH/MEDIUM/LOW e justificar.
-- **RF-12 — Rota:** sugerir sequência de paradas e permitir revisão/aprovação pelo ADMIN.
+- **RF-12 — Rota:** permitir ao ADMIN organizar manualmente e aprovar as paradas, com retorno em ordem inversa à ida.
 - **RF-13 — Visualização do motorista:** exibir rota aprovada e dados operacionais permitidos.
 - **RF-14 — Confirmação:** solicitar confirmação automática por WhatsApp quando integração estiver habilitada.
 - **RF-15 — Webhook:** receber resposta e atualizar estado de confirmação.
@@ -26,7 +26,7 @@ Apoiar a Secretaria Municipal de Saúde na organização do transporte de pacien
 - **RF-18 — Finalização:** permitir finalizar viagem e registrar horário real no servidor.
 - **RF-19 — Ida:** registrar embarque/ausência de cada paciente na ida.
 - **RF-20 — Volta:** registrar retorno individual ou informação prévia de que não retornará.
-- **RF-21 — Ausência no retorno:** permitir registrar tentativa de contato, espera e ocorrência; seguir fluxo conforme orientação operacional.
+- **RF-21 — Ausência no retorno:** permitir ao motorista tentar contato e registrar ocorrência e justificativa para prosseguir.
 - **RF-22 — Cancelamento:** permitir cancelar viagem antes de iniciada, com motivo e auditoria.
 - **RF-23 — Interrupção:** permitir interromper viagem iniciada, com motivo, horário, responsável e providência.
 - **RF-24 — Auditoria:** registrar alterações administrativas e eventos críticos.
@@ -52,10 +52,10 @@ Apoiar a Secretaria Municipal de Saúde na organização do transporte de pacien
 - **RN-03:** cada PatientTrip possui estado independente de ida e volta.
 - **RN-04:** saída da ida e início do retorno são horários fixos planejados.
 - **RN-05:** a rota de ida entrega pacientes nos estabelecimentos; a rota de retorno recolhe pacientes nos estabelecimentos.
-- **RN-06:** o sistema sugere rota simples; ADMIN aprova.
+- **RN-06:** ADMIN organiza manualmente e aprova a rota; o retorno segue a ordem inversa da ida.
 - **RN-07:** motorista consulta rota aprovada; navegação em tempo real não é requisito do MVP.
-- **RN-08:** se paciente não avisou previamente que não retornará/estará ausente, motorista aguarda e tenta contato com paciente/acompanhante.
-- **RN-09:** se não for para aguardar, motorista segue viagem e registra ocorrência/orientação.
+- **RN-08:** se paciente estiver ausente no recolhimento, motorista tenta contato com paciente ou acompanhante.
+- **RN-09:** motorista pode prosseguir após registrar ocorrência e justificativa; não há remoção automática da participação.
 - **RN-10:** ausência de resposta no WhatsApp não equivale a desistência.
 - **RN-11:** capacidade inclui pacientes e acompanhantes, exclui motorista.
 - **RN-12:** motorista não acessa CPF, Cartão SUS, endereço completo ou diagnóstico.
@@ -64,8 +64,8 @@ Apoiar a Secretaria Municipal de Saúde na organização do transporte de pacien
 - **RN-15:** correção de horário real exige ADMIN, justificativa e auditoria.
 - **RN-16:** viagem iniciada e não concluída normalmente deve ser interrompida, não cancelada.
 - **RN-17:** veículo inativo/em manutenção não pode ser alocado.
-- **RN-18:** não pode haver sobreposição de agenda de motorista ou veículo.
+- **RN-18:** não pode haver sobreposição de agenda de motorista ou veículo; a chegada prevista ao município de origem é o fim planejado da ocupação do veículo, a partir da saída municipal.
 
 ## 5. Pendências
 
-Ver `DECISIONS.md` e `ROADMAP.md`. Em especial: campos obrigatórios do paciente, política de espera, provedor de WhatsApp, provedor de mapas/rotas, retenção de dados e política de autenticação.
+Ver `DECISIONS.md` e `ROADMAP.md`. Permanecem pendentes, entre outros, o limite de espera no retorno, a escolha do provedor de e-mail para recuperação de senha, detalhes da integração WhatsApp, retenção de dados e política de autenticação. As decisões da Release 4 são requisitos, não indicação de implementação concluída.
