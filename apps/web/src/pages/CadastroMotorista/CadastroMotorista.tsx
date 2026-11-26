@@ -214,7 +214,7 @@ export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoris
           </div>
           {loading ? (
             <p role="status">Carregando motoristas…</p>
-          ) : drivers.length === 0 ? (
+          ) : listError ? null : drivers.length === 0 ? (
             <p className="texto-suave">Nenhum motorista encontrado.</p>
           ) : (
             <div className="tabela-rolagem">

@@ -178,7 +178,7 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
                     ))}
                   </tbody>
                 </table>
-                {visiveis.length === 0 && (
+                {!listError && visiveis.length === 0 && (
                   <p className="texto-suave" style={{ margin: '16px 10px 4px' }}>
                     Nenhuma viagem encontrada.
                   </p>

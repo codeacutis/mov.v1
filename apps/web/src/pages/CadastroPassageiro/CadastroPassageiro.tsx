@@ -101,8 +101,12 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
   const [cepError, setCepError] = useState('');
   const [buscandoCep, setBuscandoCep] = useState(false);
   const cepBuscado = useRef('');
+  const cepRequest = useRef<AbortController | null>(null);
 
   function openCreateForm() {
+    cepRequest.current?.abort();
+    cepBuscado.current = '';
+    setCepError('');
     setEditingId(null);
     setForm(EMPTY_FORM);
     setError('');
@@ -111,6 +115,8 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
   }
 
   function openEditForm(p: Patient) {
+    cepRequest.current?.abort();
+    cepBuscado.current = '';
     setEditingId(p.id);
     setForm({
       name: p.name,
@@ -136,6 +142,8 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
   }
 
   function cancelForm() {
+    cepRequest.current?.abort();
+    setBuscandoCep(false);
     setFormOpen(false);
     setEditingId(null);
     setForm(EMPTY_FORM);
@@ -146,17 +154,26 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
 
   async function buscarCep(cep: string) {
     const cepLimpo = cep.replace(/\D/g, '');
-    if (cepLimpo.length !== 8 || cepLimpo === cepBuscado.current) return;
+    if (!cepLimpo) return;
+    if (cepLimpo.length !== 8) {
+      setCepError('Informe um CEP com 8 dígitos ou deixe o campo vazio.');
+      return;
+    }
+    if (cepLimpo === cepBuscado.current) return;
+    cepRequest.current?.abort();
+    const controller = new AbortController();
+    cepRequest.current = controller;
     cepBuscado.current = cepLimpo;
     setBuscandoCep(true);
     setCepError('');
     try {
-      const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`, { signal: controller.signal });
       if (!res.ok) throw new Error();
       const data: ViaCepResponse = await res.json();
+      if (controller.signal.aborted) return;
       if (data.erro) {
         setCepError('CEP não encontrado. Verifique e tente novamente.');
-        setForm((f) => ({ ...f, logradouro: '', bairro: '', cidade: '', uf: '' }));
+        cepBuscado.current = '';
       } else {
         setForm((f) => ({
           ...f,
@@ -167,14 +184,21 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
         }));
       }
     } catch {
+      if (controller.signal.aborted) return;
+      cepBuscado.current = '';
       setCepError('Serviço de CEP indisponível. Preencha o endereço manualmente.');
     } finally {
-      setBuscandoCep(false);
+      if (cepRequest.current === controller) setBuscandoCep(false);
     }
   }
 
   async function savePatient(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (saving) return;
+    if (form.cep && form.cep.replace(/\D/g, '').length !== 8) {
+      setCepError('Informe um CEP com 8 dígitos ou deixe o campo vazio.');
+      return;
+    }
     setSaving(true);
     setError('');
     setNotice('');
@@ -198,6 +222,8 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
         await apiRequest<Patient>('/patients', { method: 'POST', body: JSON.stringify(payload) });
         setNotice('Paciente cadastrado.');
       }
+      cepRequest.current?.abort();
+      setBuscandoCep(false);
       setFormOpen(false);
       setEditingId(null);
       setForm(EMPTY_FORM);
@@ -251,7 +277,7 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
                 onChange={(e) => setForm({ ...form, birthDate: e.target.value })} required />
               <Campo id="telefone" rotulo="Telefone" type="tel" inputMode="tel"
                 placeholder="(00) 00000-0000" value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: mascaraTelefone(e.target.value) })} />
+                onChange={(e) => setForm({ ...form, phone: mascaraTelefone(e.target.value) })} required />
               <Campo id="sus" rotulo="Cartão SUS" inputMode="numeric"
                 placeholder="000 0000 0000 0000" value={form.susCardNumber}
                 onChange={(e) => setForm({ ...form, susCardNumber: e.target.value })} />
@@ -259,6 +285,8 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
                 value={form.cep} maxLength={9}
                 onChange={(e) => {
                   const v = e.target.value.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2');
+                  cepRequest.current?.abort();
+                  setBuscandoCep(false);
                   setCepError('');
                   cepBuscado.current = '';
                   setForm({ ...form, cep: v });
@@ -334,7 +362,7 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
           </div>
           {loading ? (
             <p role="status">Carregando pacientes…</p>
-          ) : patients.length === 0 ? (
+          ) : listError ? null : patients.length === 0 ? (
             <p className="texto-suave">Nenhum paciente encontrado.</p>
           ) : (
             <div className="tabela-rolagem">
