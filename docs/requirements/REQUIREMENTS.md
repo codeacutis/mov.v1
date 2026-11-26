@@ -31,6 +31,8 @@ Apoiar a Secretaria Municipal de Saúde na organização do transporte de pacien
 - **RF-23 — Interrupção:** permitir interromper viagem iniciada, com motivo, horário, responsável e providência.
 - **RF-24 — Auditoria:** registrar alterações administrativas e eventos críticos.
 - **RF-25 — Histórico:** preservar histórico operacional.
+- **RF-26 — Cancelamento de participação:** ADMIN pode cancelar participação antes do início com motivo, autor e instante, preservando histórico e liberando vagas (D-026).
+- **RF-27 — Acompanhantes:** até um acompanhante ativo por participação, com nome e telefone obrigatórios, remoção lógica e auditoria.
 
 ## 3. Requisitos não funcionais
 

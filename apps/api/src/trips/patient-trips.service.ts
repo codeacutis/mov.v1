@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
-import { lockOperationalIntegrity } from '../common/operational-integrity';
+import { tripOccupancy, lockOperationalIntegrity } from '../common/operational-integrity';
 import {
   OutboundStatus,
   Prisma,
@@ -20,6 +20,9 @@ import {
 } from './dto/patient-trip.dto';
 
 const patientTripSelect = {
+  cancelledAt: true,
+  cancellationReason: true,
+  cancelledByUserId: true,
   id: true,
   tripId: true,
   patientId: true,
@@ -42,7 +45,7 @@ const patientTripSelect = {
   patient: { select: { id: true, name: true, phone: true } },
   priorityDefinedBy: { select: { id: true, name: true } },
   returnAbsenceReportedBy: { select: { id: true, name: true } },
-  _count: { select: { companions: true } },
+  _count: { select: { companions: { where: { removedAt: null } } } },
 } satisfies Prisma.PatientTripSelect;
 
 @Injectable()
@@ -78,12 +81,7 @@ export class PatientTripsService {
         throw new ConflictException(
           'Paciente inativo não pode ser incluído na viagem',
         );
-      const occupied =
-        trip._count.patientTrips +
-        trip.patientTrips.reduce(
-          (sum, item) => sum + item._count.companions,
-          0,
-        );
+      const occupied = await tripOccupancy(tx, tripId);
       if (occupied + 1 > trip.vehicle.capacity)
         throw new ConflictException(
           `Capacidade do veículo (${trip.vehicle.capacity}) seria excedida`,
@@ -125,9 +123,23 @@ export class PatientTripsService {
     });
   }
 
+  async cancel(actorUserId: string, id: string, reason: string) {
+    return this.prisma.$transaction(async tx => {
+      await lockOperationalIntegrity(tx);
+      const current = await this.findOrThrow(id, tx);
+      if (current.trip.status !== TripStatus.SCHEDULED) throw new ConflictException('Participações só podem ser canceladas antes do início');
+      if (current.cancelledAt) throw new ConflictException('Participação já cancelada');
+      const updated = await tx.patientTrip.update({ where: { id }, data: { cancelledAt: new Date(), cancelledByUserId: actorUserId, cancellationReason: reason.trim() }, select: patientTripSelect });
+      await this.audit.record(tx, { actorUserId, action: 'PATIENT_TRIP_CANCELLED', entityType: 'PatientTrip', entityId: id, reason: reason.trim() });
+      return updated;
+    });
+  }
+
   async update(actorUserId: string, id: string, dto: UpdatePatientTripDto) {
     return this.prisma.$transaction(async (tx) => {
+      await lockOperationalIntegrity(tx);
       const current = await this.findOrThrow(id, tx);
+      if (current.cancelledAt) throw new ConflictException('Participação cancelada não pode ser alterada');
       if (current.trip.status !== TripStatus.SCHEDULED)
         throw new ConflictException(
           'Dados planejados só podem ser alterados antes do início da viagem',
@@ -224,7 +236,9 @@ export class PatientTripsService {
         'Motivo de ausência só é aceito com NOT_RETURNING ou NO_SHOW',
       );
     return this.prisma.$transaction(async (tx) => {
+      await lockOperationalIntegrity(tx);
       const current = await this.findOrThrow(id, tx);
+      if (current.cancelledAt) throw new ConflictException('Participação cancelada não pode ser alterada');
       if (
         dto.status !== ReturnStatus.NOT_RETURNING &&
         dto.status !== ReturnStatus.NO_SHOW &&
@@ -265,7 +279,9 @@ export class PatientTripsService {
     action: string,
   ) {
     return this.prisma.$transaction(async (tx) => {
+      await lockOperationalIntegrity(tx);
       const current = await this.findOrThrow(id, tx);
+      if (current.cancelledAt) throw new ConflictException('Participação cancelada não pode ser alterada');
       const updated = await tx.patientTrip.update({
         where: { id },
         data: { [field]: status },
@@ -293,7 +309,7 @@ export class PatientTripsService {
         status: true,
         vehicle: { select: { capacity: true } },
         _count: { select: { patientTrips: true } },
-        patientTrips: { select: { _count: { select: { companions: true } } } },
+        patientTrips: { select: { _count: { select: { companions: { where: { removedAt: null } } } } } },
       },
     });
     if (!trip) throw new NotFoundException('Viagem não encontrada');
@@ -307,6 +323,7 @@ export class PatientTripsService {
     const item = await client.patientTrip.findUnique({
       where: { id },
       select: {
+        cancelledAt: true,
         id: true,
         priority: true,
         confirmationStatus: true,

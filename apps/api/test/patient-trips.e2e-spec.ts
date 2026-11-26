@@ -92,6 +92,29 @@ describe('Participações de pacientes (e2e)', () => {
     patientId = patient.body.id as string;
   });
 
+  it('cancels logically, preserves history and releases patient and companion seats', async () => {
+    const created = await request(http).post(`/trips/${tripId}/patient-trips`).set(auth()).send(participation()).expect(201);
+    await request(http).post(`/patient-trips/${created.body.id}/companions`).set(auth()).send({ name: 'Companion Test', phone: '11999990000' }).expect(201);
+    await request(http).patch(`/patient-trips/${created.body.id}/cancel`).set(auth()).send({ reason: ' ' }).expect(400);
+    await request(http).patch(`/patient-trips/${created.body.id}/cancel`).set(auth()).send({ reason: 'Administrative cancellation' }).expect(200);
+    const saved = await prisma.patientTrip.findUniqueOrThrow({ where: { id: created.body.id } });
+    expect(saved.cancelledAt).toBeTruthy();
+    expect(saved.cancelledByUserId).toBeTruthy();
+    expect(await prisma.tripCompanion.count({ where: { patientTripId: saved.id } })).toBe(1);
+    await request(http).patch(`/patient-trips/${saved.id}`).set(auth()).send({ priority: 'LOW', priorityJustification: 'Test' }).expect(409);
+    await request(http).post(`/trips/${tripId}/patient-trips`).set(auth()).send(participation()).expect(409);
+    const patient = await request(http).post('/patients').set(auth()).send({ name: 'Other Test Patient', birthDate: '1980-01-01' }).expect(201);
+    const second = await request(http).post(`/trips/${tripId}/patient-trips`).set(auth()).send({ ...participation(), patientId: patient.body.id }).expect(201);
+    await request(http).post(`/patient-trips/${second.body.id}/companions`).set(auth()).send({ name: 'Other Companion', phone: '11999991111' }).expect(201);
+    expect(await prisma.auditLog.count({ where: { action: 'PATIENT_TRIP_CANCELLED', entityId: saved.id } })).toBe(1);
+  });
+
+  it('rejects cancellation after departure', async () => {
+    const created = await request(http).post(`/trips/${tripId}/patient-trips`).set(auth()).send(participation()).expect(201);
+    await request(http).patch(`/trips/${tripId}/start`).set(auth()).expect(200);
+    await request(http).patch(`/patient-trips/${created.body.id}/cancel`).set(auth()).send({ reason: 'Test' }).expect(409);
+  });
+
   it('associa o paciente com prioridade, consulta e estados iniciais próprios', async () => {
     const created = await request(http)
       .post(`/trips/${tripId}/patient-trips`)

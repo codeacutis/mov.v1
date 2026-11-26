@@ -6,7 +6,7 @@ import './FormularioViagem.css';
 
 interface FormularioViagemProps {
   trip?: { id: string; vehicle: { id: string }; driver: { id: string }; municipalPickupPoint: string; plannedDepartureAt: string; plannedReturnStartAt: string };
-  onConcluir: (salvou: boolean) => void;
+  onConcluir: (salvou: boolean, tripId?: string) => void;
 }
 
 interface Vehicle {
@@ -104,7 +104,7 @@ export default function FormularioViagem({ onConcluir, trip }: FormularioViagemP
     setSaving(true);
     setError('');
     try {
-      await apiRequest(trip ? `/trips/${trip.id}` : '/trips', {
+      const saved = await apiRequest<{ id: string }>(trip ? `/trips/${trip.id}` : '/trips', {
         method: trip ? 'PATCH' : 'POST',
         body: JSON.stringify({
           vehicleId: form.vehicleId,
@@ -114,7 +114,7 @@ export default function FormularioViagem({ onConcluir, trip }: FormularioViagemP
           plannedReturnStartAt: toIso(form.returnDate, form.returnTime),
         }),
       });
-      onConcluir(true);
+      onConcluir(true, saved.id);
     } catch (cause) {
       setError(apiErrorMessage(cause));
       setSaving(false);

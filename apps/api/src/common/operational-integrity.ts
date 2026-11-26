@@ -10,9 +10,9 @@ export async function tripOccupancy(
   tx: Prisma.TransactionClient,
   tripId: string,
 ) {
-  const patients = await tx.patientTrip.count({ where: { tripId } });
+  const patients = await tx.patientTrip.count({ where: { tripId, cancelledAt: null } });
   const companions = await tx.tripCompanion.count({
-    where: { patientTrip: { tripId } },
+    where: { removedAt: null, patientTrip: { tripId, cancelledAt: null } },
   });
   return patients + companions;
 }

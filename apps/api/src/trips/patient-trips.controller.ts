@@ -11,6 +11,7 @@ import { CurrentUser, Roles } from '../auth/decorators';
 import { AuthUser } from '../auth/auth.types';
 import { Role } from '../generated/prisma/client';
 import {
+  CancelPatientTripDto,
   CreatePatientTripDto,
   UpdateOutboundStatusDto,
   UpdatePatientTripDto,
@@ -35,6 +36,11 @@ export class PatientTripsController {
     @Body() dto: CreatePatientTripDto,
   ) {
     return this.patientTrips.create(actor.id, tripId, dto);
+  }
+
+  @Patch('patient-trips/:id/cancel')
+  cancel(@CurrentUser() actor: AuthUser, @Param('id', new ParseUUIDPipe()) id: string, @Body() dto: CancelPatientTripDto) {
+    return this.patientTrips.cancel(actor.id, id, dto.reason);
   }
 
   @Patch('patient-trips/:id')

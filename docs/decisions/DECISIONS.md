@@ -7,6 +7,13 @@ Legenda:
 - **PROPOSED:** recomendação técnica/produto ainda não aprovada.
 - **PENDING:** depende de nova definição.
 
+## D-026 — Cancelamento administrativo de participação
+**Status: CONFIRMED — Product Owner, 26/11/2026**
+
+Antes do início da viagem, ADMIN pode cancelar logicamente uma participação com motivo, autor e instante registrados pelo backend. O registro é preservado e as vagas do paciente e acompanhante são liberadas. A participação cancelada não é removida nem alterada; permanece a unicidade de paciente por viagem. Não há cancelamento automático por ausência ou falta de confirmação.
+
+A remoção administrativa de acompanhante preserva seu registro com `removedAt` e gera auditoria; somente acompanhantes não removidos de participações não canceladas contam na ocupação. O gerenciamento planejado ocorre antes do início. Substitui a exclusão física anterior do acompanhante; não recupera registros já excluídos.
+
 ## D-001 — Stack
 **Status: CONFIRMED**
 

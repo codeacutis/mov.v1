@@ -9,7 +9,8 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import { Roles } from '../auth/decorators';
+import { CurrentUser, Roles } from '../auth/decorators';
+import { AuthUser } from '../auth/auth.types';
 import { Role } from '../generated/prisma/client';
 import {
   CompanionsService,
@@ -29,27 +30,30 @@ export class CompanionsController {
 
   @Post()
   create(
+    @CurrentUser() actor: AuthUser,
     @Param('patientTripId', new ParseUUIDPipe()) patientTripId: string,
     @Body() dto: CreateCompanionDto,
   ) {
-    return this.companions.create(patientTripId, dto);
+    return this.companions.create(patientTripId, dto, actor.id);
   }
 
   @Patch(':companionId')
   update(
+    @CurrentUser() actor: AuthUser,
     @Param('patientTripId', new ParseUUIDPipe()) patientTripId: string,
     @Param('companionId', new ParseUUIDPipe()) companionId: string,
     @Body() dto: UpdateCompanionDto,
   ) {
-    return this.companions.update(patientTripId, companionId, dto);
+    return this.companions.update(patientTripId, companionId, dto, actor.id);
   }
 
   @Delete(':companionId')
   @HttpCode(204)
   remove(
+    @CurrentUser() actor: AuthUser,
     @Param('patientTripId', new ParseUUIDPipe()) patientTripId: string,
     @Param('companionId', new ParseUUIDPipe()) companionId: string,
   ) {
-    return this.companions.remove(patientTripId, companionId);
+    return this.companions.remove(patientTripId, companionId, actor.id);
   }
 }
