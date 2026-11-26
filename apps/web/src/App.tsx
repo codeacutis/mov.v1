@@ -2,6 +2,7 @@ import { useState } from "react";
 import { apiRequest, clearAccessToken } from "./services/api";
 import Login from "./pages/Login/Login";
 import RecuperarSenha from "./pages/RecuperarSenha/RecuperarSenha";
+import RedefinirSenha from "./pages/RedefinirSenha/RedefinirSenha";
 import Painel from "./pages/Painel/Painel";
 import Viagens from "./pages/Viagens/Viagens";
 import AgendaFrota from "./pages/AgendaFrota/AgendaFrota";
@@ -14,6 +15,7 @@ import AppMotorista from "./pages/AppMotorista/AppMotorista";
 type Tela =
   | "login"
   | "recuperar"
+  | "redefinir"
   | "painel"
   | "viagem"
   | "agenda"
@@ -35,8 +37,26 @@ const TELAS_DO_MENU: Record<string, Tela> = {
   "App do motorista": "appMotorista",
 };
 
+const ROTA_REDEFINIR = "/redefinir-senha";
+
+/**
+ * Link do e-mail: /redefinir-senha?token=... . O token é lido uma única vez e
+ * removido da barra de endereço, para não ficar no histórico nem vazar por Referer.
+ */
+function lerTokenDeRedefinicao(): string | null {
+  if (window.location.pathname !== ROTA_REDEFINIR) return null;
+  const token = new URLSearchParams(window.location.search).get("token") ?? "";
+  window.history.replaceState(null, "", "/");
+  return token;
+}
+
+// Lido uma única vez ao carregar a página (um useState seria executado duas
+// vezes no StrictMode, e a segunda leitura já não encontraria o token).
+const TOKEN_REDEFINICAO = lerTokenDeRedefinicao();
+
 export default function App() {
-  const [tela, setTela] = useState<Tela>("login");
+  const tokenRedefinicao = TOKEN_REDEFINICAO;
+  const [tela, setTela] = useState<Tela>(tokenRedefinicao === null ? "login" : "redefinir");
   // Quando true, a tela de viagens abre direto no formulário de nova viagem.
   const [abrirNovaViagem, setAbrirNovaViagem] = useState(false);
 
@@ -64,6 +84,14 @@ export default function App() {
   const interna = { onNavegar: navegar, onSair: sair };
 
   switch (tela) {
+    case "redefinir":
+      return (
+        <RedefinirSenha
+          token={tokenRedefinicao ?? ""}
+          onVoltar={() => setTela("login")}
+          onSolicitarNovo={() => setTela("recuperar")}
+        />
+      );
     case "recuperar":
       return <RecuperarSenha onVoltar={() => setTela("login")} />;
     case "painel":

@@ -171,7 +171,7 @@ Não implementar inicialmente otimização avançada do tipo VRP com janelas de 
 - **Invalidação:** nova solicitação invalida tokens pendentes anteriores. Intervalo mínimo de 60 s entre solicitações do mesmo usuário (anti-flood).
 - **Efeitos da redefinição:** troca o hash da senha (bcrypt, mesma política de 10–72 caracteres), **revoga todas as sessões** do usuário e invalida outros tokens pendentes. Senha fraca é recusada sem consumir o token.
 - **Auditoria:** `PASSWORD_RESET_REQUESTED` e `PASSWORD_RESET_COMPLETED`, sem token nem senha.
-- **PENDING — entrega do link:** não há provedor de e-mail escolhido. A entrega passa pela abstração `PasswordResetNotifier` (como o WhatsApp). A implementação padrão **não envia nada**; só em desenvolvimento, com `PASSWORD_RESET_DEV_LOG=true`, imprime o link no console. Antes de produção é preciso decidir provedor, custo e política de contato.
+- **PENDING (implementação provisória) — entrega do link:** a entrega passa pela abstração `PasswordResetNotifier`. Provisoriamente, com `BREVO_API_KEY` e `MAIL_FROM_EMAIL`, usa a API HTTP do Brevo (HTTPS), porque o Render free bloqueia SMTP (25/465/587). Sem essas variáveis, cai no notificador de desenvolvimento, que não envia nada (com `PASSWORD_RESET_DEV_LOG=true` imprime o link no console, fora de produção). A escolha definitiva de provedor, custo e política de contato aguarda decisão do responsável.
 - **Release 4:** o Product Owner mantém pendente a escolha do provedor de e-mail; esta indicação não confirma os demais itens propostos de D-024.
 - **Não incluído:** tela no front (`/redefinir-senha`), limite de tentativas por IP, limpeza periódica de tokens expirados.
 
