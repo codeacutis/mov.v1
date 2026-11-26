@@ -42,6 +42,8 @@
 .evento--agendada { background: var(--info-bg); color: var(--info); }
 .evento--andamento { background: var(--ok-bg); color: var(--ok); }
 .evento--concluida { background: var(--sf); color: var(--mut); border-color: var(--ln); }
+.evento--cancelada { background: var(--erro-bg); color: var(--erro); text-decoration: line-through; }
+.evento--interrompida { background: var(--alerta-bg); color: var(--alerta); }
 .evento--conflito { background: var(--alerta-bg); color: var(--alerta); }
 .evento--manutencao { background: var(--erro-bg); color: var(--erro); }
 
