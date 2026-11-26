@@ -4,6 +4,7 @@ import AppLayout from '../../components/AppLayout';
 import FormularioViagem from '../../components/FormularioViagem';
 import GerenciarParadas from '../GerenciarParadas/GerenciarParadas';
 import Paginacao from '../../components/Paginacao';
+import { apiRequest, apiErrorMessage } from '../../services/api';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 
 interface ViagensProps {
@@ -13,11 +14,12 @@ interface ViagensProps {
 }
 
 type TripStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'INTERRUPTED';
-type Aba = 'todas' | 'hoje' | 'sem-motorista';
+
 
 interface Trip {
   id: string;
   plannedDepartureAt: string;
+  plannedReturnStartAt: string;
   municipalPickupPoint: string;
   status: TripStatus;
   vehicle: { id: string; plate: string };
@@ -41,22 +43,6 @@ const STATUS_CLASS: Record<TripStatus, string> = {
   INTERRUPTED: 'status--alerta',
 };
 
-const ABAS: { id: Aba; rotulo: string }[] = [
-  { id: 'todas', rotulo: 'Todas' },
-  { id: 'hoje', rotulo: 'Hoje' },
-  { id: 'sem-motorista', rotulo: 'Sem motorista' },
-];
-
-function isToday(iso: string) {
-  const d = new Date(iso);
-  const hoje = new Date();
-  return (
-    d.getFullYear() === hoje.getFullYear() &&
-    d.getMonth() === hoje.getMonth() &&
-    d.getDate() === hoje.getDate()
-  );
-}
-
 function formatDateTime(iso: string) {
   return new Date(iso).toLocaleString('pt-BR', {
     day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
@@ -69,13 +55,27 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
   const [criando, setCriando] = useState(iniciarCriando);
   const [paradaTrip, setParadaTrip] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
-  const [aba, setAba] = useState<Aba>('todas');
+  const [editing, setEditing] = useState<Trip | undefined>();
+  const [operation, setOperation] = useState<{ trip: Trip; kind: 'cancel' | 'interrupt' } | null>(null);
+  const [reason, setReason] = useState('');
+  const [action, setAction] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
-  const visiveis = trips.filter((t) => {
-    if (aba === 'hoje' && !isToday(t.plannedDepartureAt)) return false;
-    if (aba === 'sem-motorista' && t.driver !== null) return false;
-    return true;
-  });
+  async function submitOperation(event: React.FormEvent) {
+    event.preventDefault();
+    if (!operation) return;
+    setSaving(true); setError(''); setNotice('');
+    try {
+      await apiRequest(`/trips/${operation.trip.id}/${operation.kind}`, { method: 'PATCH', body: JSON.stringify({ reason: reason.trim(), ...(operation.kind === 'interrupt' ? { action: action.trim() } : {}) }) });
+      setNotice(operation.kind === 'cancel' ? 'Viagem cancelada.' : 'Viagem interrompida.');
+      setOperation(null); reload();
+    } catch (cause) { setError(apiErrorMessage(cause)); }
+    finally { setSaving(false); }
+  }
+
+
+  const visiveis = trips;
 
   function navegar(item: string) {
     if (item === 'Viagens') { setCriando(false); setNotice(''); }
@@ -84,8 +84,9 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
 
   function aoConcluirFormulario(salvou: boolean) {
     setCriando(false);
+    setEditing(undefined);
     if (salvou) {
-      setNotice('Viagem cadastrada com sucesso.');
+      setNotice(editing ? 'Viagem atualizada.' : 'Viagem cadastrada com sucesso.');
       reload();
     }
   }
@@ -94,8 +95,8 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
     <AppLayout ativo="Viagens" onNavegar={navegar} onSair={onSair}>
       {paradaTrip ? (
         <GerenciarParadas tripId={paradaTrip} onVoltar={() => setParadaTrip(null)} />
-      ) : criando ? (
-        <FormularioViagem onConcluir={aoConcluirFormulario} />
+      ) : criando || editing ? (
+        <FormularioViagem key={editing?.id ?? "new"} trip={editing} onConcluir={aoConcluirFormulario} />
       ) : (
         <>
           <header className="cabecalho cabecalho--linha">
@@ -112,18 +113,15 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
           </header>
 
           {notice && <div className="aviso aviso--ok" role="status">{notice}</div>}
+          {error && <div className="aviso aviso--erro" role="alert">{error}</div>}
+          {operation && <form className="cartao" onSubmit={submitOperation}>
+            <h2>{operation.kind === "cancel" ? "Cancelar viagem" : "Interromper viagem"}</h2>
+            <label>Motivo<input value={reason} onChange={e => setReason(e.target.value)} required maxLength={500} /></label>
+            {operation.kind === "interrupt" && <label>Provid?ncias<input value={action} onChange={e => setAction(e.target.value)} required maxLength={500} /></label>}
+            <button type="submit" disabled={saving || !reason.trim() || (operation.kind === "interrupt" && !action.trim())}>{saving ? "Salvando?" : "Confirmar"}</button>
+            <button type="button" disabled={saving} onClick={() => setOperation(null)}>Voltar</button>
+          </form>}
           {listError && <div className="aviso aviso--erro" role="alert">{listError}</div>}
-
-          <div className="abas" role="group" aria-label="Filtrar por grupo">
-            {ABAS.map((a) => (
-              <button key={a.id} type="button"
-                className={a.id === aba ? 'aba aba--ativa' : 'aba'}
-                aria-pressed={a.id === aba}
-                onClick={() => setAba(a.id)}>
-                {a.rotulo}
-              </button>
-            ))}
-          </div>
 
           <div className="filtros">
             <input type="search" className="filtro"
@@ -161,6 +159,11 @@ export default function Viagens({ iniciarCriando = false, onNavegar, onSair }: V
                           </span>
                         </td>
                         <td>
+                          {t.status === 'SCHEDULED' && <>
+                            <button className="link" type="button" onClick={() => { setError(''); setEditing(t); }}>Editar</button>
+                            <button className="link" type="button" disabled={saving} onClick={() => { setReason(''); setAction(''); setError(''); setOperation({ trip: t, kind: 'cancel' }); }}>Cancelar</button>
+                          </>}
+                          {t.status === 'IN_PROGRESS' && <button className="link" type="button" disabled={saving} onClick={() => { setReason(''); setAction(''); setError(''); setOperation({ trip: t, kind: 'interrupt' }); }}>Interromper</button>}
                           <button className="link" type="button" onClick={() => setParadaTrip(t.id)}>
                             Paradas
                           </button>

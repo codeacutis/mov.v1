@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import AppLayout from '../../components/AppLayout';
 import Campo from '../../components/Campo';
 import Selecao from '../../components/Selecao';
@@ -13,6 +13,11 @@ interface CadastroMotoristaProps {
 
 interface Driver {
   id: string;
+  licenseNumber: string | null;
+  licenseCategory: string | null;
+  licenseExpiresAt: string | null;
+  hasPassengerTransportCourse: boolean;
+  notes: string | null;
   isActive: boolean;
   user: { id: string; name: string; email: string; role: string; isActive: boolean };
 }
@@ -53,13 +58,29 @@ function errorMessage(error: unknown): string {
 export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoristaProps) {
   const { data: drivers, loading, error: listError, page, totalPages, q, search, goTo, reload } =
     usePaginatedList<Driver>('/drivers');
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<DriverForm>(EMPTY_FORM);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [integrity, setIntegrity] = useState('');
+  useEffect(() => {
+    const controller = new AbortController();
+    apiRequest<{ usersWithoutDriver: { id: string }[]; inconsistentDrivers: { id: string }[] }>('/drivers/inconsistencies', { signal: controller.signal })
+      .then(result => { if (!controller.signal.aborted && (result.usersWithoutDriver.length || result.inconsistentDrivers.length)) setIntegrity(`Revis?o necess?ria: ${result.usersWithoutDriver.length} contas sem motorista e ${result.inconsistentDrivers.length} v?nculos inconsistentes. Solicite a revis?o dos v?nculos ao respons?vel pelo sistema. Nenhum registro foi removido.`); })
+      .catch(cause => { if (!controller.signal.aborted) setIntegrity(`N?o foi poss?vel verificar os v?nculos: ${apiErrorMessage(cause)}`); });
+    return () => controller.abort();
+  }, []);
+
+  function openEdit(d: Driver) {
+    setEditingId(d.id);
+    setForm({ name: d.user.name, email: d.user.email, password: '', licenseNumber: d.licenseNumber ?? '', licenseCategory: d.licenseCategory ?? '', licenseExpiresAt: d.licenseExpiresAt?.slice(0, 10) ?? '', hasPassengerTransportCourse: d.hasPassengerTransportCourse, notes: d.notes ?? '' });
+    setError(''); setNotice(''); setFormOpen(true);
+  }
 
   function openForm() {
+    setEditingId(null);
     setForm(EMPTY_FORM);
     setError('');
     setNotice('');
@@ -80,16 +101,16 @@ export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoris
     const payload = {
       name: form.name.trim(),
       email: form.email.trim(),
-      password: form.password,
-      licenseNumber: form.licenseNumber.trim() || undefined,
-      licenseCategory: form.licenseCategory || undefined,
-      licenseExpiresAt: form.licenseExpiresAt || undefined,
+      password: form.password || undefined,
+      licenseNumber: form.licenseNumber.trim() || '',
+      licenseCategory: form.licenseCategory || '',
+      licenseExpiresAt: form.licenseExpiresAt || '',
       hasPassengerTransportCourse: form.hasPassengerTransportCourse,
-      notes: form.notes.trim() || undefined,
+      notes: form.notes.trim() || '',
     };
     try {
-      await apiRequest<Driver>('/drivers', { method: 'POST', body: JSON.stringify(payload) });
-      setNotice('Motorista cadastrado.');
+      await apiRequest<Driver>(editingId ? `/drivers/${editingId}` : '/drivers', { method: editingId ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
+      setNotice(editingId ? 'Motorista atualizado.' : 'Motorista cadastrado.');
       setFormOpen(false);
       setForm(EMPTY_FORM);
       reload();
@@ -127,12 +148,13 @@ export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoris
         )}
       </header>
 
+      {integrity && <div className="aviso" role="status">{integrity}</div>}
       {notice && <div className="aviso aviso--ok" role="status">{notice}</div>}
       {(error || listError) && <div className="aviso aviso--erro" role="alert">{error || listError}</div>}
 
       {formOpen ? (
         <form className="cartao" onSubmit={saveDriver}>
-          <h2 className="cartao__titulo">Cadastrar motorista</h2>
+          <h2 className="cartao__titulo">{editingId ? 'Editar motorista' : 'Cadastrar motorista'}</h2>
           <fieldset className="secao">
             <legend>Dados pessoais</legend>
             <div className="grade">
@@ -142,7 +164,7 @@ export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoris
                 onChange={(e) => setForm({ ...form, email: e.target.value })} required />
               <Campo id="senha" rotulo="Senha (mínimo 10 caracteres)" type="password"
                 value={form.password} minLength={10}
-                onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+                onChange={(e) => setForm({ ...form, password: e.target.value })} required={!editingId} />
             </div>
           </fieldset>
           <fieldset className="secao">
@@ -211,6 +233,7 @@ export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoris
                         </span>
                       </td>
                       <td>
+                        <button className="link" type="button" onClick={() => openEdit(d)}>Editar</button>
                         {d.isActive && (
                           <button className="link" type="button" onClick={() => void inactivate(d)}>
                             Inativar

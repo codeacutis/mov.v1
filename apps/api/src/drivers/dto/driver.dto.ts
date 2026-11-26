@@ -2,6 +2,8 @@ import { PartialType } from '@nestjs/mapped-types';
 import { Transform } from 'class-transformer';
 import {
   IsBoolean,
+  IsDateString,
+  ValidateIf,
   IsEmail,
   IsNotEmpty,
   IsOptional,
@@ -45,7 +47,8 @@ export class CreateDriverDto {
   licenseCategory?: string;
 
   @IsOptional()
-  @IsString()
+  @ValidateIf((_object, value) => value !== '')
+  @IsDateString()
   licenseExpiresAt?: string;
 
   @IsOptional()
