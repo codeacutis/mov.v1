@@ -5,6 +5,7 @@ import { apiRequest, apiErrorMessage, fetchAllPages } from '../../services/api';
 import './FormularioViagem.css';
 
 interface FormularioViagemProps {
+  trip?: { id: string; vehicle: { id: string }; driver: { id: string }; municipalPickupPoint: string; plannedDepartureAt: string; plannedReturnStartAt: string };
   onConcluir: (salvou: boolean) => void;
 }
 
@@ -51,8 +52,12 @@ function toIso(date: string, time: string): string {
   return new Date(`${date}T${time}:00`).toISOString();
 }
 
-export default function FormularioViagem({ onConcluir }: FormularioViagemProps) {
-  const [form, setForm] = useState<FormViagem>(FORM_VAZIO);
+export default function FormularioViagem({ onConcluir, trip }: FormularioViagemProps) {
+  const [form, setForm] = useState<FormViagem>(() => {
+    if (!trip) return FORM_VAZIO;
+    const local = (iso: string) => { const d = new Date(iso); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString(); };
+    return { vehicleId: trip.vehicle.id, driverId: trip.driver.id, municipalPickupPoint: trip.municipalPickupPoint, departureDate: local(trip.plannedDepartureAt).slice(0,10), departureTime: local(trip.plannedDepartureAt).slice(11,16), returnDate: local(trip.plannedReturnStartAt).slice(0,10), returnTime: local(trip.plannedReturnStartAt).slice(11,16) };
+  });
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -99,8 +104,8 @@ export default function FormularioViagem({ onConcluir }: FormularioViagemProps) 
     setSaving(true);
     setError('');
     try {
-      await apiRequest('/trips', {
-        method: 'POST',
+      await apiRequest(trip ? `/trips/${trip.id}` : '/trips', {
+        method: trip ? 'PATCH' : 'POST',
         body: JSON.stringify({
           vehicleId: form.vehicleId,
           driverId: form.driverId,
@@ -130,7 +135,7 @@ export default function FormularioViagem({ onConcluir }: FormularioViagemProps) 
     <>
       <header className="cabecalho cabecalho--linha">
         <div>
-          <h1>Nova viagem</h1>
+          <h1>{trip ? 'Editar viagem' : 'Nova viagem'}</h1>
           <p>Preencha os dados da viagem.</p>
         </div>
         <div className="cabecalho__acoes">

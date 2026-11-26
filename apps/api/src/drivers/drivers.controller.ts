@@ -25,6 +25,9 @@ export class DriversController {
     return this.drivers.list(query.q, query.page, query.limit);
   }
 
+  @Get('inconsistencies')
+  inconsistencies() { return this.drivers.inconsistencies(); }
+
   @Post()
   create(@CurrentUser() actor: AuthUser, @Body() dto: CreateDriverDto) {
     return this.drivers.create(actor.id, dto);

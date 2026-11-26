@@ -9,6 +9,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { Transform } from 'class-transformer';
 import { IsString, MaxLength, MinLength } from 'class-validator';
 import { PageQueryDto } from '../common/page-query.dto';
 import { AuthUser } from '../auth/auth.types';
@@ -19,6 +20,7 @@ import { InterruptTripDto, UpdateTripDto } from './dto/update-trip.dto';
 import { TripsService } from './trips.service';
 
 class CancelTripDto {
+  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
   @MinLength(1)
   @MaxLength(500)

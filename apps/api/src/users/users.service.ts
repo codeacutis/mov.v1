@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -35,6 +36,9 @@ export class UsersService {
    * controller; aqui só aplicamos regras de dados.
    */
   async create(actorUserId: string, dto: CreateUserDto) {
+    if ('role' in dto && dto.role === Role.MOTORISTA) {
+      throw new BadRequestException('Cadastre contas MOTORISTA pelo cadastro de motoristas (/drivers)');
+    }
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_COST);
     return this.prisma.$transaction(async (tx) => {
       const user = await this.insert(tx, { ...dto, passwordHash });
@@ -55,6 +59,9 @@ export class UsersService {
    * simultâneas não criem dois administradores de bootstrap.
    */
   async createFirstAdmin(dto: BootstrapAdminDto) {
+    if ('role' in dto && dto.role === Role.MOTORISTA) {
+      throw new BadRequestException('Cadastre contas MOTORISTA pelo cadastro de motoristas (/drivers)');
+    }
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_COST);
     return this.prisma.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${BOOTSTRAP_LOCK_KEY})`;

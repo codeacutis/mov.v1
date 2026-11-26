@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
+import { lockOperationalIntegrity } from '../common/operational-integrity';
 import { AuditService } from '../audit/audit.service';
 import { Prisma, Role } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
@@ -38,6 +39,18 @@ export class DriversService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
   ) {}
+
+  async inconsistencies() {
+    const users = await this.prisma.user.findMany({
+      where: { role: Role.MOTORISTA, driver: { is: null } },
+      select: { id: true, isActive: true },
+    });
+    const drivers = await this.prisma.driver.findMany({
+      where: { OR: [ { user: { role: { not: Role.MOTORISTA } } }, { isActive: true, user: { isActive: false } }, { isActive: false, user: { isActive: true } } ] },
+      select: { id: true, userId: true },
+    });
+    return { usersWithoutDriver: users, inconsistentDrivers: drivers };
+  }
 
   async list(q?: string, page = 1, limit = 20) {
     const where: Prisma.DriverWhereInput = q
@@ -124,6 +137,13 @@ export class DriversService {
         await tx.user.update({ where: { id: driver.userId }, data: userData });
       }
 
+      await tx.driver.update({ where: { id }, data: {
+        ...(dto.licenseNumber !== undefined && { licenseNumber: dto.licenseNumber.trim() || null }),
+        ...(dto.licenseCategory !== undefined && { licenseCategory: dto.licenseCategory.trim() || null }),
+        ...(dto.licenseExpiresAt !== undefined && { licenseExpiresAt: dto.licenseExpiresAt ? new Date(dto.licenseExpiresAt) : null }),
+        ...(dto.hasPassengerTransportCourse !== undefined && { hasPassengerTransportCourse: dto.hasPassengerTransportCourse }),
+        ...(dto.notes !== undefined && { notes: dto.notes.trim() || null }),
+      } });
       const updated = await tx.driver.findUnique({
         where: { id },
         select: driverSelect,
@@ -136,17 +156,23 @@ export class DriversService {
         changes: { fields: Object.keys(dto) },
       });
       return updated;
+    }).catch((error: unknown) => {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        throw new ConflictException('E-mail j? cadastrado');
+      }
+      throw error;
     });
   }
 
   async inactivate(actorUserId: string, id: string) {
     return this.prisma.$transaction(async (tx) => {
+      await lockOperationalIntegrity(tx);
       const driver = await tx.driver.findUnique({
         where: { id },
         select: { id: true, userId: true, isActive: true },
       });
       if (!driver) throw new NotFoundException('Motorista não encontrado');
-      if (!driver.isActive) return driver;
+
 
       await tx.driver.update({ where: { id }, data: { isActive: false } });
       await tx.user.update({

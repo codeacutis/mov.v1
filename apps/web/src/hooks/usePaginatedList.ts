@@ -8,40 +8,45 @@ export function usePaginatedList<T>(path: string, limit = 20) {
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestId = useRef(0);
 
   const load = useCallback(
     async (currentPage: number, currentQ: string) => {
+      const id = ++requestId.current;
       setLoading(true);
       setError('');
       try {
         const params = new URLSearchParams({ page: String(currentPage), limit: String(limit) });
         if (currentQ.trim()) params.set('q', currentQ.trim());
         const result = await apiRequest<PageResult<T>>(`${path}?${params}`);
+        if (id !== requestId.current) return;
+        const lastPage = Math.max(1, Math.ceil(result.total / limit));
+        if (currentPage > lastPage) { setPage(lastPage); return; }
         setData(result.data);
         setTotal(result.total);
       } catch (cause) {
-        setError(apiErrorMessage(cause));
+        if (id === requestId.current) { setData([]); setError(apiErrorMessage(cause)); }
       } finally {
-        setLoading(false);
+        if (id === requestId.current) setLoading(false);
       }
     },
     [path, limit],
   );
 
   useEffect(() => {
-    void load(page, q);
+    const requests = requestId;
+    const timer = setTimeout(() => void load(page, q), 300);
+    return () => { clearTimeout(timer); requests.current++; };
   }, [page, q, load]);
 
   function search(value: string) {
     setQ(value);
     setPage(1);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => void load(1, value), 400);
+
   }
 
   function goTo(p: number) {
-    setPage(p);
+    setPage(Math.max(1, p));
   }
 
   const totalPages = Math.max(1, Math.ceil(total / limit));

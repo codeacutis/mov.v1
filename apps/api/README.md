@@ -111,3 +111,12 @@ As rotas abaixo exigem o papel `ADMIN`.
 | `PATCH /patient-trips/:id/return-status` | Altera somente o estado de retorno da participação indicada. |
 
 As rotas de estado recebem `status`. No retorno, envie também `reason` para `NOT_RETURNING` (aviso prévio) ou `NO_SHOW` (ausência constatada). O backend registra autor e horário. A participação continua na viagem e a ida permanece independente. A falta de confirmação não aciona alteração automática. O registro administrativo de ausência não define quando o motorista pode seguir viagem.
+
+
+### Manuten??o administrativa de motoristas
+
+`POST /users` recusa `MOTORISTA`: utilize `POST /drivers`, que cria conta e cadastro em uma transa??o com auditoria. A edi??o em `PATCH /drivers/:id` inclui dados da conta e habilita??o. A inativa??o mant?m o hist?rico e desativa Driver e User juntos.
+
+`GET /drivers/inconsistencies` ? exclusivo do ADMIN e retorna identificadores de contas MOTORISTA sem Driver e v?nculos com papel ou situa??o divergentes. ? uma consulta para revis?o manual; n?o remove nem corrige registros existentes automaticamente.
+
+As listagens administrativas aceitam `q`, `page` e `limit`, com ordena??o definida no servidor. N?o h? contrato para filtros adicionais ou ordena??o escolhida pelo cliente. A interface de viagens utiliza essa busca paginada e oferece edi??o/cancelamento em `SCHEDULED` e interrup??o em `IN_PROGRESS`; o backend revalida a situa??o em cada opera??o.

@@ -182,13 +182,13 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
     const payload = {
       name: form.name.trim(),
       birthDate: form.birthDate,
-      phone: form.phone.trim() || undefined,
-      susCardNumber: form.susCardNumber.trim() || undefined,
-      address: enderecoMontado || undefined,
+      phone: form.phone.trim() || '',
+      susCardNumber: form.susCardNumber.trim() || '',
+      address: enderecoMontado || '',
       usesWheelchair: form.usesWheelchair,
       hasReducedMobility: form.hasReducedMobility,
       needsBoardingAssistance: form.needsBoardingAssistance,
-      operationalNotes: form.operationalNotes.trim() || undefined,
+      operationalNotes: form.operationalNotes.trim() || '',
     };
     try {
       if (editingId) {
