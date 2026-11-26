@@ -26,6 +26,13 @@ services:
       # URL pública do front, SEM barra final (ex.: https://mov-web.onrender.com).
       - key: WEB_ORIGIN
         sync: false
+      # Recuperação de senha por e-mail via API HTTP do Brevo (o Render free
+      # bloqueia SMTP). Sem estas duas, o link não é enviado. Nunca versionar.
+      - key: BREVO_API_KEY
+        sync: false
+      # E-mail remetente verificado no Brevo.
+      - key: MAIL_FROM_EMAIL
+        sync: false
 
   # Front React (site estático)
   - type: web
@@ -34,6 +41,11 @@ services:
     rootDir: apps/web
     buildCommand: npm install && npm run build
     staticPublishPath: dist
+    # Links do e-mail (/redefinir-senha?token=...) precisam cair no index.html.
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: NODE_VERSION
         value: "22"
