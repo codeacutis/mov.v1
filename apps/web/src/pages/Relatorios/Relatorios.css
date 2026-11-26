@@ -53,3 +53,4 @@
 @media (max-width: 560px) {
   .indicadores { grid-template-columns: 1fr; }
 }
+.relatorio-viagens { margin-top: 24px; }
