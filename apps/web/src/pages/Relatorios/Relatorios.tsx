@@ -2,7 +2,7 @@ import './Relatorios.css';
 import { useEffect, useState } from 'react';
 import AppLayout from '../../components/AppLayout';
 import Selecao from '../../components/Selecao';
-import { apiRequest } from '../../services/api';
+import { apiRequest, apiErrorMessage } from '../../services/api';
 
 interface RelatoriosProps {
   onNavegar: (item: string) => void;
@@ -79,6 +79,7 @@ export default function Relatorios({ onNavegar, onSair }: RelatoriosProps) {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [filtroVeiculo, setFiltroVeiculo] = useState('Todos');
 
   const periodos = getUltimosMeses(3);
@@ -86,13 +87,12 @@ export default function Relatorios({ onNavegar, onSair }: RelatoriosProps) {
 
   useEffect(() => {
     Promise.all([
-      apiRequest<{ data: Trip[] }>('/trips').catch(() => ({ data: [] as Trip[] })),
-      apiRequest<{ data: Vehicle[] }>('/vehicles').catch(() => ({ data: [] as Vehicle[] })),
+      apiRequest<{ data: Trip[] }>('/trips'),
+      apiRequest<{ data: Vehicle[] }>('/vehicles'),
     ]).then(([t, v]) => {
       setTrips(t.data);
       setVehicles(v.data);
-      setLoading(false);
-    });
+    }).catch(cause => setError(apiErrorMessage(cause))).finally(() => setLoading(false));
   }, []);
 
   const periodoSelecionado = periodos.find((p) => p.label === filtroPeriodo) ?? periodos[0];
@@ -162,6 +162,8 @@ export default function Relatorios({ onNavegar, onSair }: RelatoriosProps) {
 
       {loading ? (
         <p role="status">Carregando relatórios…</p>
+      ) : error ? (
+        <div className="aviso aviso--erro" role="alert">{error}</div>
       ) : (
         <>
           <section className="indicadores" aria-label={`Resumo de ${filtroPeriodo}`}>

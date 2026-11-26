@@ -38,7 +38,6 @@ interface Trip {
   municipalPickupPoint: string;
   status: TripStatus;
   vehicle: { plate: string; capacity: number };
-  driver: { id: string; user: { id: string; name: string } };
   _count?: { patientTrips: number };
 }
 
@@ -81,13 +80,11 @@ export default function AppMotorista({ onNavegar, onSair }: AppMotoristaProps) {
       try {
         const [meData, trips] = await Promise.all([
           apiRequest<Me>('/auth/me'),
-          apiRequest<{ data: Trip[] }>('/trips'),
+          apiRequest<Trip[]>('/driver/trips'),
         ]);
         setMe(meData);
 
-        const minhasViagens = trips.data.filter(
-          (t) => t.driver?.user.id === meData.id,
-        );
+        const minhasViagens = trips;
 
         const hoje = minhasViagens.find(
           (t) =>
@@ -113,8 +110,12 @@ export default function AppMotorista({ onNavegar, onSair }: AppMotoristaProps) {
         setProximasViagens(proximas);
 
         if (hoje) {
-          const stops = await apiRequest<TripStop[]>(`/trips/${hoje.id}/stops`).catch(() => []);
-          setStopsHoje(stops);
+          const detail = await apiRequest<{ stops: Omit<TripStop, 'outboundPatientTrips' | 'returnPatientTrips'>[]; patientTrips: { id: string; patient: { name: string }; outboundStopId: string | null; returnStopId: string | null }[] }>(`/driver/trips/${hoje.id}`);
+          setStopsHoje(detail.stops.map(stop => ({
+            ...stop,
+            outboundPatientTrips: detail.patientTrips.filter(p => p.outboundStopId === stop.id),
+            returnPatientTrips: detail.patientTrips.filter(p => p.returnStopId === stop.id),
+          })));
         }
       } catch (cause) {
         setError(errorMessage(cause));
