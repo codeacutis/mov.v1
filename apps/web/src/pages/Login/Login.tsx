@@ -1,11 +1,19 @@
-import { useState, type FormEvent } from 'react';
-import AuthLayout from '../../components/AuthLayout';
-import Campo from '../../components/Campo';
-import { apiRequest, apiErrorMessage, ApiRequestError, saveAccessToken, clearAccessToken } from '../../services/api';
-import './Login.css';
+import { useState, type FormEvent } from "react";
+import AuthLayout from "../../components/AuthLayout";
+import Campo from "../../components/Campo";
+import {
+  apiRequest,
+  apiErrorMessage,
+  ApiRequestError,
+  saveAccessToken,
+  clearAccessToken,
+  getSessionUser,
+  type SessionUser,
+} from "../../services/api";
+import "./Login.css";
 
 interface LoginProps {
-  onEntrar: (role: string) => void;
+  onEntrar: (user: SessionUser) => void;
   onEsqueciSenha: () => void;
 }
 interface LoginResponse {
@@ -14,31 +22,33 @@ interface LoginResponse {
 }
 
 export default function Login({ onEntrar, onEsqueciSenha }: LoginProps) {
-  const [usuario, setUsuario] = useState('');
-  const [senha, setSenha] = useState('');
+  const [usuario, setUsuario] = useState("");
+  const [senha, setSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [manterConectado, setManterConectado] = useState(false);
   const [carregando, setCarregando] = useState(false);
-  const [erro, setErro] = useState('');
+  const [erro, setErro] = useState("");
 
   async function aoEnviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCarregando(true);
-    setErro('');
+    setErro("");
     try {
-      const result = await apiRequest<LoginResponse>('/auth/login', {
-        method: 'POST',
+      const result = await apiRequest<LoginResponse>("/auth/login", {
+        method: "POST",
         body: JSON.stringify({ email: usuario, password: senha }),
       });
       saveAccessToken(result.accessToken, manterConectado);
-      const me = await apiRequest<{ role: string }>('/auth/me');
-      onEntrar(me.role);
+      const me = await getSessionUser();
+      onEntrar(me);
     } catch (cause) {
       clearAccessToken();
       if (cause instanceof ApiRequestError && cause.status === 401) {
-        setErro('E-mail ou senha inválidos.');
+        setErro("E-mail ou senha inválidos.");
       } else if (cause instanceof TypeError) {
-        setErro('Não foi possível acessar a API. Confira se o backend está em execução.');
+        setErro(
+          "Não foi possível acessar a API. Confira se o backend está em execução.",
+        );
       } else {
         setErro(apiErrorMessage(cause));
       }
@@ -55,7 +65,11 @@ export default function Login({ onEntrar, onEsqueciSenha }: LoginProps) {
           Use o usuário e a senha fornecidos pela prefeitura.
         </p>
 
-        {erro && <div className="aviso aviso--erro" role="alert">{erro}</div>}
+        {erro && (
+          <div className="aviso aviso--erro" role="alert">
+            {erro}
+          </div>
+        )}
 
         <Campo
           id="usuario"
@@ -71,7 +85,7 @@ export default function Login({ onEntrar, onEsqueciSenha }: LoginProps) {
         <Campo
           id="senha"
           rotulo="Senha"
-          type={mostrarSenha ? 'text' : 'password'}
+          type={mostrarSenha ? "text" : "password"}
           autoComplete="current-password"
           placeholder="Digite sua senha"
           value={senha}
@@ -84,7 +98,7 @@ export default function Login({ onEntrar, onEsqueciSenha }: LoginProps) {
               aria-pressed={mostrarSenha}
               onClick={() => setMostrarSenha((value) => !value)}
             >
-              {mostrarSenha ? 'Ocultar' : 'Mostrar'}
+              {mostrarSenha ? "Ocultar" : "Mostrar"}
             </button>
           }
         />
@@ -103,8 +117,12 @@ export default function Login({ onEntrar, onEsqueciSenha }: LoginProps) {
           </button>
         </div>
 
-        <button type="submit" className="botao botao--primario" disabled={carregando}>
-          {carregando ? 'Entrando…' : 'Entrar'}
+        <button
+          type="submit"
+          className="botao botao--primario"
+          disabled={carregando}
+        >
+          {carregando ? "Entrando…" : "Entrar"}
         </button>
       </form>
     </AuthLayout>

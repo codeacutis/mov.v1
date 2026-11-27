@@ -42,4 +42,6 @@
 - Não resposta não pode alterar automaticamente a participação para desistência.
 - A situação da ida não deve ser sobrescrita pela situação da volta.
 - Dados exibidos ao motorista devem respeitar o princípio do menor privilégio.
+- Após login e restauração da sessão, ADMIN abre o painel e MOTORISTA abre sua área operacional, sem menu administrativo.
+- O motorista registra o início real do retorno por ação específica. Botões de embarque e ausência respeitam a etapa persistida na API; após cada operação, os dados são recarregados.
 - Conflitos de agenda devem ser impedidos mesmo em solicitações simultâneas.

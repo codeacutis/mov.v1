@@ -50,6 +50,7 @@ Idade deve ser calculada a partir de `birthDate`; não persistir idade como dado
 - `plannedReturnStartAt` (horário fixo de início do percurso de retorno)
 - horário previsto de chegada ao município de origem (fim planejado da ocupação; nome técnico a definir)
 - `actualDepartureAt`
+- `actualReturnStartAt`: início real da etapa de retorno, registrado pelo servidor.
 - `actualReturnAt`
 - `status`: `SCHEDULED | IN_PROGRESS | COMPLETED | CANCELLED | INTERRUPTED`
 - campos de cancelamento/interrupção: motivo, instante, ator e observação, conforme necessário
@@ -130,10 +131,12 @@ O ADMIN organiza e aprova a sequência de ida; o retorno segue a ordem inversa. 
 - `id`
 - `tripId`
 - `authorId`
+- `type`: `INCIDENT | CONTACT_ATTEMPT`; registros anteriores permanecem `INCIDENT`.
+- `patientTripId` opcional: vínculo com uma participação da mesma viagem; obrigatório para tentativa de contato pelo motorista.
 - `description`
 - `createdAt`
 
-Usada para registrar ausência no retorno e outras observações operacionais sem alterar automaticamente os estados de outras participações.
+Usada para registrar ausência no retorno e outras observações operacionais sem alterar automaticamente os estados de outras participações. O lançamento de `NO_SHOW` no retorno pelo motorista grava tentativa e ocorrência na mesma transação da participação e auditoria. O texto livre não integra os GETs do portal operacional.
 
 ## Relacionamentos principais
 

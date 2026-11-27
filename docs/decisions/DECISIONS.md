@@ -124,7 +124,7 @@ Paciente pode utilizar o transporte na ida e não retornar no veículo municipal
 
 **Histórico — substituído na Release 4:** anteriormente previa-se aguardar a chegada/disponibilidade e seguir mediante orientação ou situação que indicasse não aguardar; estavam pendentes o procedimento sem contato e quem autorizaria seguir. A nova decisão permite ao motorista prosseguir após tentativa de contato, ocorrência e justificativa. Limite de espera e detalhes não especificados permanecem pendentes; não estabelecer timeout arbitrário.
 
-**Implementação atual:** o ADMIN pode documentar a ausência constatada como `NO_SHOW`, com motivo obrigatório e identificação do registro. Esse lançamento é distinto do aviso prévio `NOT_RETURNING`. A atuação do motorista conforme a Release 4 ainda depende de implementação.
+**Implementação atual:** ADMIN e MOTORISTA documentam a ausência constatada como `NO_SHOW`, distinta do aviso prévio `NOT_RETURNING`. Pelo portal operacional, o motorista registra motivo e tentativa de contato; o backend grava ocorrência e tentativa vinculadas à participação na mesma transação, com autor, instante e auditoria. O texto antigo de espera no AGENTS.md foi substituído pela regra confirmada da Release 4. RN-08 e RN-09 estão alinhadas a D-018; não foi acrescentado timeout ou fluxo de autorização de saída.
 
 **Confirmado pelo produto:** sem aviso prévio e sem contato, o motorista registra uma observação da viagem e segue o caminho. O retorno só pode ser utilizado por paciente que tenha embarcado na ida.
 
@@ -181,4 +181,6 @@ Não implementar inicialmente otimização avançada do tipo VRP com janelas de 
 - `RolesGuard` passa a **negar por padrão**: rota sem `@Public()`, `@Authenticated()` ou `@Roles(...)` retorna 403. Antes, rota sem `@Roles` era liberada a qualquer usuário autenticado.
 - Rotas exclusivas do MOTORISTA em `/driver/trips` (lista e detalhe das viagens atribuídas), separadas das rotas do ADMIN em `/trips`. Viagem de outro motorista responde 404. As paradas só aparecem após `routeApprovedAt` (RN-07).
 - Matriz de acesso documentada em `docs/security/ACCESS_CONTROL.md` e verificada por testes (varredura de todas as rotas + acesso negado).
-- **Fora do escopo desta revisão:** início/finalização de viagem e registros de ida/volta pelo motorista (ainda não implementados na API).
+- **Histórico da revisão original:** início/finalização de viagem e registros de ida/volta pelo motorista estavam fora do escopo e não implementados naquela revisão.
+
+**Evolução da implementação (27/11/2026):** o portal usa os endpoints específicos do motorista para início da ida, início real do retorno, conclusão, estados independentes de participação, ocorrências e tentativas de contato. As ações delegam aos serviços compartilhados, validando vínculo e estado dentro da transação. `actualReturnStartAt` registra o instante no servidor, sem impor bloqueio pelo relógio do aparelho. A navegação consulta `/auth/me` após autenticação e ao restaurar a sessão, separando ADMIN e MOTORISTA. Esta descrição de implementação não altera o status PROPOSED da política de autenticação.

@@ -1,5 +1,14 @@
-import { useState } from "react";
-import { apiRequest, clearAccessToken } from "./services/api";
+import { useEffect, useState } from "react";
+import {
+  apiRequest,
+  clearAccessToken,
+  getAccessToken,
+  getSessionUser,
+  apiErrorMessage,
+  ApiRequestError,
+  SESSION_EXPIRED_EVENT,
+  type SessionUser,
+} from "./services/api";
 import Login from "./pages/Login/Login";
 import RecuperarSenha from "./pages/RecuperarSenha/RecuperarSenha";
 import RedefinirSenha from "./pages/RedefinirSenha/RedefinirSenha";
@@ -22,8 +31,7 @@ type Tela =
   | "veiculo"
   | "motorista"
   | "passageiro"
-  | "relatorios"
-  | "appMotorista";
+  | "relatorios";
 
 // Item do menu lateral -> tela. Itens sem tela ainda não fazem nada.
 const TELAS_DO_MENU: Record<string, Tela> = {
@@ -34,7 +42,6 @@ const TELAS_DO_MENU: Record<string, Tela> = {
   Motoristas: "motorista",
   Passageiros: "passageiro",
   Relatórios: "relatorios",
-  "App do motorista": "appMotorista",
 };
 
 const ROTA_REDEFINIR = "/redefinir-senha";
@@ -56,11 +63,67 @@ const TOKEN_REDEFINICAO = lerTokenDeRedefinicao();
 
 export default function App() {
   const tokenRedefinicao = TOKEN_REDEFINICAO;
-  const [tela, setTela] = useState<Tela>(tokenRedefinicao === null ? "login" : "redefinir");
+  const [tela, setTela] = useState<Tela>(
+    tokenRedefinicao === null ? "login" : "redefinir",
+  );
   // Quando true, a tela de viagens abre direto no formulário de nova viagem.
   const [abrirNovaViagem, setAbrirNovaViagem] = useState(false);
+  const [user, setUser] = useState<SessionUser | null>(null);
+  const [checking, setChecking] = useState(true);
+  const [sessionError, setSessionError] = useState("");
+  const [retrySession, setRetrySession] = useState(0);
+
+  useEffect(() => {
+    let controller = new AbortController();
+    async function restore() {
+      controller.abort();
+      controller = new AbortController();
+      const signal = controller.signal;
+      const token = getAccessToken();
+      setChecking(true);
+      setUser(null);
+      setSessionError("");
+      try {
+        if (!token || tokenRedefinicao !== null) return;
+        const identity = await getSessionUser(signal);
+        if (!signal.aborted && token === getAccessToken()) {
+          setUser(identity);
+          setTela("painel");
+        }
+      } catch (error) {
+        if (signal.aborted || token !== getAccessToken()) return;
+        if (
+          error instanceof ApiRequestError &&
+          [401, 403].includes(error.status)
+        )
+          clearAccessToken();
+        else setSessionError(apiErrorMessage(error));
+      } finally {
+        if (!signal.aborted) setChecking(false);
+      }
+    }
+    function expired() {
+      controller.abort();
+      setUser(null);
+      setTela("login");
+      setSessionError("");
+      setChecking(false);
+    }
+    function storage(event: StorageEvent) {
+      if (event.key === "mov.accessToken" || event.key === null) void restore();
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, expired);
+    window.addEventListener("storage", storage);
+    void restore();
+    return () => {
+      controller.abort();
+      window.removeEventListener(SESSION_EXPIRED_EVENT, expired);
+      window.removeEventListener("storage", storage);
+    };
+  }, [retrySession, tokenRedefinicao]);
 
   function navegar(item: string) {
+    if (user?.role !== "ADMIN") return;
     if (item === "Nova viagem") {
       setAbrirNovaViagem(true);
       setTela("viagem");
@@ -78,10 +141,49 @@ export default function App() {
       // A sessão local é removida mesmo quando a API não responde.
     } finally {
       clearAccessToken();
+      setUser(null);
+      setSessionError("");
+      setChecking(false);
       setTela("login");
     }
   }
   const interna = { onNavegar: navegar, onSair: sair };
+
+  if (tela !== "redefinir" && tela !== "recuperar") {
+    if (checking)
+      return (
+        <main className="formulario" role="status">
+          Verificando sessão…
+        </main>
+      );
+    if (sessionError)
+      return (
+        <main className="formulario">
+          <p role="alert">{sessionError}</p>
+          <button
+            className="botao"
+            onClick={() => setRetrySession((value) => value + 1)}
+          >
+            Tentar novamente
+          </button>
+          <button className="botao" onClick={() => void sair()}>
+            Sair
+          </button>
+        </main>
+      );
+    if (!user)
+      return (
+        <Login
+          onEntrar={(identity) => {
+            setUser(identity);
+            setTela("painel");
+          }}
+          onEsqueciSenha={() => setTela("recuperar")}
+        />
+      );
+    if (user.role === "MOTORISTA")
+      return <AppMotorista onSair={sair} userName={user.name} />;
+  }
 
   switch (tela) {
     case "redefinir":
@@ -114,14 +216,7 @@ export default function App() {
       return <CadastroPassageiro {...interna} />;
     case "relatorios":
       return <Relatorios {...interna} />;
-    case "appMotorista":
-      return <AppMotorista {...interna} />;
     default:
-      return (
-        <Login
-          onEntrar={(role) => setTela(role === "MOTORISTA" ? "appMotorista" : "painel")}
-          onEsqueciSenha={() => setTela("recuperar")}
-        />
-      );
+      return <Painel {...interna} />;
   }
 }
