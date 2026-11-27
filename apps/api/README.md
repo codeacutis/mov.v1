@@ -168,6 +168,8 @@ As listagens administrativas aceitam `q`, `page` e `limit`, com ordena??o defini
 
 ## Documentação automática da API
 
+`GET /trips` aceita filtros opcionais combinados `status`, `vehicleId` e `driverId`, além de `q`, `page` e `limit`. Busca e filtros são aplicados antes da contagem e da paginação; `q` também pesquisa a descrição/nome do veículo. As respostas administrativas de viagem e agenda incluem `vehicle.description`. A interface prioriza esse nome e usa a placa como identificação complementar ou fallback para descrições vazias. O painel geral usa os totais dos cadastros, incluindo inativos/histórico; análises por período permanecem nos relatórios.
+
 O Swagger usa `@nestjs/swagger`, com identificação **Mov+**, versão **1.0**, tags por módulo e autenticação Bearer JWT. A interface fica em `/api/docs`; os contratos em `/api/docs-json` e `/api/docs-yaml`, na mesma origem da API. As rotas de negócio mantêm seus caminhos atuais, sem prefixo `/api`.
 
 `SWAGGER_ENABLED=true` habilita a publicação da documentação; `false` a desabilita, incluindo JSON, YAML e recursos da interface. Sem a variável, fica habilitada fora de `NODE_ENV=production` e desabilitada em produção. Valores diferentes de `true`/`false` impedem a inicialização. Habilitar em ambiente publicado torna a documentação pública: configure essa opção conforme a política do ambiente e, se necessário, restrinja o acesso na infraestrutura.

@@ -8,6 +8,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
   return (
     <div className="auth">
       <section className="auth__marca">
+        <div className="auth__orbita" aria-hidden="true"><span /><span /><span /></div>
         <div className="logo">
           <span className="logo__icone">+</span>
           Mov+
@@ -17,6 +18,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
           Gestão do transporte municipal para a Secretaria de Saúde e para o
           setor de transporte.
         </p>
+        <div className="auth__etapas" aria-hidden="true"><span>Planejar</span><i /><span>Conectar</span><i /><span>Cuidar</span></div>
       </section>
       <main className="auth__conteudo">{children}</main>
     </div>

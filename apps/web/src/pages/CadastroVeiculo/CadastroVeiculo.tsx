@@ -171,7 +171,7 @@ export default function CadastroVeiculo({ onNavegar, onSair }: CadastroVeiculoPr
             />
             <Campo
               id="vehicle-description"
-              rotulo="Descrição ou modelo"
+                rotulo="Nome ou modelo do veículo"
               placeholder="Van de passageiros"
               maxLength={160}
               value={form.description}
@@ -220,13 +220,13 @@ export default function CadastroVeiculo({ onNavegar, onSair }: CadastroVeiculoPr
             <div className="tabela-rolagem">
               <table className="tabela">
                 <thead>
-                  <tr><th>Placa</th><th>Descrição</th><th>Capacidade</th><th>Situação</th><th>Ações</th></tr>
+                  <tr><th>Veículo</th><th>Placa</th><th>Capacidade</th><th>Situação</th><th>Ações</th></tr>
                 </thead>
                 <tbody>
                   {vehicles.map((vehicle) => (
                     <tr key={vehicle.id}>
-                      <td><strong>{vehicle.plate}</strong></td>
-                      <td>{vehicle.description || '—'}</td>
+                      <td><strong>{vehicle.description?.trim() || vehicle.plate}</strong></td>
+                      <td>{vehicle.plate}</td>
                       <td>{vehicle.capacity}</td>
                       <td>
                         <span className={`status ${vehicle.status === 'ACTIVE' ? 'status--ok' : vehicle.status === 'INACTIVE' ? 'status--erro' : 'status--alerta'}`}>
