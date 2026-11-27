@@ -7,6 +7,17 @@ Legenda:
 - **PROPOSED:** recomendação técnica/produto ainda não aprovada.
 - **PENDING:** depende de nova definição.
 
+## D-028 — Limites dos cadastros e formato do CNS
+**Status: CONFIRMED — Product Owner, 27/11/2026**
+
+A capacidade cadastrada de veículos deve ser um inteiro de 1 a 60 passageiros, permitindo veículos menores. O teto de 60 complementa D-008; o motorista continua fora da contagem. Registros anteriores não são alterados automaticamente.
+
+**Implementação:** DTOs validam o intervalo e a migration `20261127120000_vehicle_capacity_limit` protege novas capacidades no PostgreSQL. Registros legados acima do teto permanecem consultáveis; atualizações sem mudança de capacidade podem preservar o valor anterior no banco, evitando perda do histórico.
+
+O Cartão Nacional de Saúde permanece opcional. Quando informado, deve conter 15 dígitos e passar na validação do CNS documentada pelo [e-SUS APS](https://integracao.esusaps.bridge.ufsc.tech/ledi/documentacao/regras/algoritmo_CNS.html). A interface apresenta máscara `000 0000 0000 0000`; a API aceita essa apresentação e persiste somente dígitos. Vazio permite limpar o campo. Não há consulta externa ao CADSUS nem confirmação de identidade.
+
+Nomes, descrições e observações têm limites na interface alinhados aos DTOs da API; campos opcionais são identificados no cadastro de pacientes. As paradas novas entram no fim da lista da ida, sem digitação manual de sequência no formulário; os controles de reordenação e a aprovação manual de D-014 são preservados.
+
 ## D-027 — Data e horário da consulta na participação
 **Status: CONFIRMED — Product Owner, 27/11/2026**
 

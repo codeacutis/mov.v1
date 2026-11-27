@@ -1,16 +1,18 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, Min, MaxLength } from 'class-validator';
 
 export class PageQueryDto {
   @ApiPropertyOptional({
     type: String,
     nullable: true,
+    maxLength: 200,
     description:
       'Busca textual sem distinção de maiúsculas; campos pesquisados descritos na operação.',
   })
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   q?: string;
 
   @ApiPropertyOptional({

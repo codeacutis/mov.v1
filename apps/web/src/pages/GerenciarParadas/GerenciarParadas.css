@@ -12,3 +12,26 @@
 
 .paradas__pacientes { display: flex; flex-direction: column; gap: 8px; }
 .paradas__pacientes-lista { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+
+.paradas { display: grid; gap: 24px; }
+.paradas > :is(.cartao, .cabecalho, .aviso) { margin: 0; }
+.paradas__formulario > p { margin: 8px 0 22px; }
+.paradas__campos { border: 0; margin: 0; padding: 0; min-width: 0; }
+.paradas__form-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr); gap: 24px; align-items: start; }
+.paradas__bloco { border: 1px solid var(--ln); border-radius: 10px; padding: 20px; min-width: 0; }
+.paradas__bloco h3 { margin: 0; font-size: 17px; }
+.paradas__bloco > p { margin: 8px 0 20px; font-size: 13px; }
+.paradas__bloco .grade { gap: 8px 20px; margin-bottom: 16px; }
+.paradas__bloco .campo:last-child { margin-bottom: 0; }
+.paradas__bloco textarea { width: 100%; }
+.paradas__formulario .acoes { border-top: 1px solid var(--ln); padding-top: 20px; margin-top: 24px; justify-content: flex-end; }
+.paradas__pacientes { gap: 10px; max-height: 360px; overflow: auto; }
+.paradas__pacientes .check { padding: 12px; border: 1px solid var(--ln); border-radius: 8px; background: var(--bg); font-size: 14px; }
+.paradas__pacientes .check:has(input:checked) { border-color: var(--link); }
+.paradas__pacientes .check:has(input:disabled) { opacity: .6; }
+.paradas__item { padding: 20px 0; }
+.paradas__item-header > strong { flex-basis: 100%; font-size: 16px; }
+.paradas__endereco { margin: 12px 0 6px; }
+.paradas__remover { margin-left: 0; }
+@media (max-width: 1150px) { .paradas__form-grid, .paradas__secoes { grid-template-columns: 1fr; } }
+@media (max-width: 650px) { .paradas__bloco { padding: 16px; } .paradas__bloco .grade { grid-template-columns: 1fr; } }

@@ -8,6 +8,7 @@ import {
   Matches,
   MaxLength,
   Min,
+  Max,
 } from 'class-validator';
 import { VehicleStatus } from '../../generated/prisma/client';
 
@@ -37,11 +38,12 @@ export class UpdateVehicleDto {
   @MaxLength(160)
   description?: string | null;
 
-  @ApiPropertyOptional({ type: 'integer', nullable: true, minimum: 1 })
+  @ApiPropertyOptional({ type: 'integer', nullable: true, minimum: 1, maximum: 60 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(60, { message: 'A capacidade deve ser de no máximo 60 passageiros' })
   capacity?: number;
 
   @ApiPropertyOptional({ enum: VehicleStatus, nullable: true })

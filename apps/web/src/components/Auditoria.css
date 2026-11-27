@@ -1,0 +1,29 @@
+.auditoria { padding: 20px; }
+.auditoria__titulo { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.auditoria__titulo h2 { font-size: 20px; }
+.auditoria__titulo p { margin: 4px 0 0; font-size: 13px; }
+.auditoria__filtros { display: grid; grid-template-columns: minmax(180px, 1.4fr) repeat(2, minmax(150px, 1fr)) repeat(2, minmax(130px, .8fr)); gap: 12px; padding: 16px; border: 1px solid var(--ln); border-radius: 10px; background: var(--bg); margin-bottom: 18px; }
+.auditoria__filtros .campo { min-width: 0; margin: 0; }
+.auditoria__filtros :is(input, select) { width: 100%; min-height: 42px; padding: 9px 10px; border: 1px solid var(--ln); border-radius: 8px; background: var(--sf); color: var(--ink); font: inherit; font-size: 13px; }
+.auditoria__acoes { display: flex; flex-wrap: wrap; gap: 8px; grid-column: 1 / -1; }
+.auditoria__acoes .botao { width: auto; font-size: 13px; min-height: 40px; }
+.auditoria__rolagem { max-height: 430px; border: 1px solid var(--ln); border-radius: 8px; }
+.auditoria__tabela { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 760px; }
+.auditoria__tabela th { text-align: left; }
+.auditoria__tabela td { border-top: 1px solid var(--ln); }
+.auditoria__tabela tbody tr:nth-child(even) { background: var(--bg); }
+.auditoria__tabela th { position: sticky; top: 0; z-index: 1; background: var(--bg); }
+.auditoria .auditoria__tabela :is(th, td) { padding: 9px 12px; font-size: 12px; vertical-align: top; overflow-wrap: anywhere; }
+.auditoria__tabela th:nth-child(1) { width: 16%; }
+.auditoria__tabela th:nth-child(2) { width: 20%; }
+.auditoria__tabela th:nth-child(3) { width: 28%; }
+.auditoria__tabela th:nth-child(4) { width: 14%; }
+.auditoria__tabela th:nth-child(5) { width: 22%; }
+.auditoria__tabela summary { display: inline-block; padding: 5px 9px; border: 1px solid var(--ln); border-radius: 6px; background: var(--bg); cursor: pointer; font-weight: 600; list-style: none; }
+.auditoria__tabela summary::-webkit-details-marker { display: none; }
+.auditoria__tabela summary:hover { border-color: var(--link); }
+.auditoria__detalhes { padding-top: 8px; max-height: 230px; overflow: auto; }
+.auditoria__detalhes p { margin: 5px 0; }
+.auditoria__detalhes pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; margin-bottom: 0; }
+@media (max-width: 1200px) { .auditoria__filtros { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 650px) { .auditoria__filtros { grid-template-columns: 1fr; } .auditoria__titulo { flex-wrap: wrap; } }

@@ -86,3 +86,11 @@
 .status--alerta { background: var(--alerta-bg); color: var(--alerta); }
 .status--erro { background: var(--erro-bg); color: var(--erro); }
 .tabela td .status { white-space: nowrap; }
+.viagem-operacao { width: min(620px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); padding: 28px; border: 1px solid var(--ln); border-radius: 16px; background: var(--sf); color: var(--ink); box-shadow: 0 24px 80px #0004; }
+.viagem-operacao::backdrop { background: #10243899; backdrop-filter: blur(3px); }
+.viagem-operacao h2 { font-size: 24px; }
+.viagem-operacao__contexto { padding: 14px 16px; border: 1px solid var(--ln); border-radius: 8px; background: var(--bg); margin: 18px 0; line-height: 1.8; }
+.viagem-operacao fieldset { padding: 0; margin: 20px 0 0; border: 0; min-width: 0; }
+.viagem-operacao textarea { resize: vertical; min-height: 96px; }
+.viagem-operacao .acoes { justify-content: flex-end; padding-top: 20px; border-top: 1px solid var(--ln); }
+@media (max-width: 560px) { .viagem-operacao { padding: 20px; } }

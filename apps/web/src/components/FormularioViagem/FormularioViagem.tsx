@@ -167,6 +167,7 @@ export default function FormularioViagem({ onConcluir, trip }: FormularioViagemP
               <div className="grade">
                 <Campo
                   id="local-saida"
+                  maxLength={300}
                   rotulo="Local de saída municipal"
                   placeholder="Praça da Saúde"
                   value={form.municipalPickupPoint}

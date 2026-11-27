@@ -38,7 +38,7 @@ describe('Pacientes (e2e)', () => {
     name: 'Maria da Silva',
     birthDate: '1980-05-10',
     phone: '(11) 91234-5678',
-    susCardNumber: '123456789012345',
+    susCardNumber: '700000000000005', // Número sintético para validação, sem identidade real.
     address: 'Rua das Flores, nº 10, Centro, Cidade/SP, CEP 01000-000',
     usesWheelchair: false,
     hasReducedMobility: true,
@@ -89,6 +89,27 @@ describe('Pacientes (e2e)', () => {
     await request(http).post('/patients').set(auth()).send({ ...base, campoInvalido: true }).expect(400);
   });
 
+  it('valida CNS opcional, normaliza a máscara e permite limpar o campo', async () => {
+    for (const susCardNumber of ['123', '700000000000006', '300000000000000', '<script>']) {
+      await request(http).post('/patients').set(auth()).send({ ...base, susCardNumber }).expect(400);
+    }
+    const created = await request(http).post('/patients').set(auth()).send({ ...base, susCardNumber: '700 0000 0000 0005' }).expect(201);
+    expect(created.body.susCardNumber).toBe('700000000000005');
+    await request(http).patch(`/patients/${created.body.id}`).set(auth()).send({ susCardNumber: '700000000000006' }).expect(400);
+    expect((await prisma.patient.findUniqueOrThrow({ where: { id: created.body.id } })).susCardNumber).toBe(base.susCardNumber);
+    await request(http).patch(`/patients/${created.body.id}`).set(auth()).send({ susCardNumber: '' }).expect(200);
+    expect((await prisma.patient.findUniqueOrThrow({ where: { id: created.body.id } })).susCardNumber).toBeNull();
+    await request(http).post('/patients').set(auth()).send({ name: 'Paciente fictício sem CNS', birthDate: base.birthDate }).expect(201);
+  });
+
+  it('recusa textos acima dos limites e trata marcação como texto', async () => {
+    for (const invalid of [{ name: 'a'.repeat(201) }, { address: 'a'.repeat(301) }, { operationalNotes: 'a'.repeat(501) }]) {
+      await request(http).post('/patients').set(auth()).send({ ...base, ...invalid }).expect(400);
+    }
+    await request(http).get(`/patients?q=${'a'.repeat(201)}`).set(auth()).expect(400);
+    await request(http).post('/patients').set(auth()).send({ ...base, name: '<script>texto fictício</script>' }).expect(201);
+  });
+
   it('exige autenticação', async () => {
     await request(http).get('/patients').expect(401);
     await request(http).post('/patients').send(base).expect(401);
@@ -96,7 +117,7 @@ describe('Pacientes (e2e)', () => {
 
   it('lista pacientes com paginação e busca por nome', async () => {
     await request(http).post('/patients').set(auth()).send(base).expect(201);
-    await request(http).post('/patients').set(auth()).send({ ...base, name: 'João Pereira', susCardNumber: '999999999999999' }).expect(201);
+    await request(http).post('/patients').set(auth()).send({ ...base, name: 'João Pereira', susCardNumber: '500000000000002' }).expect(201);
 
     const all = await request(http).get('/patients?page=1&limit=10').set(auth()).expect(200);
     expect(all.body.data).toHaveLength(2);

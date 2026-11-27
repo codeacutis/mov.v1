@@ -1,6 +1,6 @@
 import "./Viagens.css";
 import DetalhesViagem from "./DetalhesViagem";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import AppLayout from "../../components/AppLayout";
 import FormularioViagem from "../../components/FormularioViagem";
 import GerenciarParadas from "../GerenciarParadas/GerenciarParadas";
@@ -125,6 +125,14 @@ export default function Viagens({
   const [action, setAction] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const operationDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = operationDialog.current;
+    if (operation && dialog && !dialog.open) {
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+      else dialog.open = true;
+    }
+  }, [operation]);
 
   async function submitOperation(event: React.FormEvent) {
     event.preventDefault();
@@ -226,56 +234,57 @@ export default function Viagens({
               {notice}
             </div>
           )}
-          {error && (
+          {error && !operation && (
             <div className="aviso aviso--erro" role="alert">
               {error}
             </div>
           )}
           {operation && (
-            <form className="cartao" onSubmit={submitOperation}>
-              <h2>
+            <dialog ref={operationDialog} className="viagem-operacao" aria-labelledby="operacao-titulo" aria-describedby="operacao-contexto" onCancel={event => { if (saving) event.preventDefault(); else { setOperation(null); setError(''); } }}>
+            <form onSubmit={submitOperation}>
+              <h2 id="operacao-titulo">
                 {operation.kind === "cancel"
                   ? "Cancelar viagem"
                   : "Interromper viagem"}
               </h2>
-              <label>
+              <p id="operacao-contexto" className="viagem-operacao__contexto"><strong>{operation.trip.municipalPickupPoint}</strong> · {formatDateTime(operation.trip.plannedDepartureAt)}<br />{vehicleLabel(operation.trip.vehicle)} · {operation.trip.driver?.user.name}</p>
+              <p className="texto-suave">{operation.kind === 'cancel' ? 'O cancelamento preserva o histórico da viagem. Informe o motivo antes de confirmar.' : 'Registre o motivo e as providências adotadas para encerrar a operação interrompida.'}</p>
+              {error && <div className="aviso aviso--erro" role="alert">{error}</div>}
+              <fieldset disabled={saving}>
+              <div className="campo"><label htmlFor="operacao-motivo">
                 Motivo
-                <input
+              </label><textarea id="operacao-motivo" rows={3}
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   required
                   maxLength={500}
-                />
-              </label>
+                /><small className="texto-suave">{reason.length}/500 caracteres</small></div>
               {operation.kind === "interrupt" && (
-                <label>
+                <div className="campo"><label htmlFor="operacao-providencias">
                   Providências
-                  <input
+                </label><textarea id="operacao-providencias" rows={3}
                     value={action}
                     onChange={(e) => setAction(e.target.value)}
                     required
                     maxLength={500}
-                  />
-                </label>
+                  /><small className="texto-suave">{action.length}/500 caracteres</small></div>
               )}
+              <div className="acoes">
+              <button type="button" className="botao botao--secundario" disabled={saving} onClick={() => { setOperation(null); setError(''); }}>Voltar</button>
               <button
                 type="submit"
+                className="botao botao--primario"
                 disabled={
                   saving ||
                   !reason.trim() ||
                   (operation.kind === "interrupt" && !action.trim())
                 }
               >
-                {saving ? "Salvando…" : "Confirmar"}
+                {saving ? "Salvando…" : operation.kind === 'cancel' ? 'Confirmar cancelamento' : 'Confirmar interrupção'}
               </button>
-              <button
-                type="button"
-                disabled={saving}
-                onClick={() => setOperation(null)}
-              >
-                Voltar
-              </button>
+              </div></fieldset>
             </form>
+            </dialog>
           )}
           {listError && (
             <div className="aviso aviso--erro" role="alert">
@@ -286,6 +295,7 @@ export default function Viagens({
           <div className="filtros">
             <input
               type="search"
+              maxLength={200}
               className="filtro"
               aria-label="Buscar por veículo, motorista ou local"
               placeholder="Buscar veículo, motorista ou local…"

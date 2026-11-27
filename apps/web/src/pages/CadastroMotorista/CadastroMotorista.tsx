@@ -158,9 +158,9 @@ export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoris
           <fieldset className="secao">
             <legend>Dados pessoais</legend>
             <div className="grade">
-              <Campo id="nome" rotulo="Nome completo" value={form.name}
+              <Campo id="nome" rotulo="Nome completo" maxLength={200} value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-              <Campo id="email" rotulo="E-mail" type="email" value={form.email}
+              <Campo id="email" rotulo="E-mail" type="email" maxLength={254} value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })} required />
               <Campo id="senha" rotulo="Senha (mínimo 10 caracteres)" type="password"
                 value={form.password} minLength={10}
@@ -192,7 +192,7 @@ export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoris
             <legend>Observações</legend>
             <div className="campo">
               <label htmlFor="obs">Observações</label>
-              <textarea id="obs" rows={3} value={form.notes}
+              <textarea id="obs" rows={3} maxLength={500} value={form.notes}
                 onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
           </fieldset>
@@ -209,7 +209,7 @@ export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoris
         <section className="cartao">
           <h2 className="cartao__titulo">Motoristas cadastrados</h2>
           <div className="filtros">
-            <input type="search" className="filtro" placeholder="Buscar por nome, e-mail ou CNH"
+            <input type="search" className="filtro" maxLength={200} placeholder="Buscar por nome, e-mail ou CNH"
               aria-label="Buscar motoristas" value={q} onChange={(e) => search(e.target.value)} />
           </div>
           {loading ? (

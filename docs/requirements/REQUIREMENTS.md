@@ -9,8 +9,8 @@ Apoiar a Secretaria Municipal de Saúde na organização do transporte de pacien
 - **RF-01 — Autenticação:** permitir acesso por conta individual.
 - **RF-02 — Papéis:** distinguir ADMIN e MOTORISTA.
 - **RF-03 — Usuários/motoristas:** manter vínculo 1:1 entre conta de motorista e cadastro operacional.
-- **RF-04 — Pacientes:** cadastrar e manter nome, data de nascimento e telefone obrigatórios; CPF é opcional.
-- **RF-05 — Veículos:** permitir ao ADMIN cadastrar, consultar, editar e inativar veículos; validar capacidade positiva e situação operacional, mantendo histórico por inativação lógica.
+- **RF-04 — Pacientes:** cadastrar e manter nome, data de nascimento e telefone obrigatórios; CPF é opcional. CNS permanece opcional; quando preenchido, validar os 15 dígitos e o verificador conforme e-SUS APS (D-028). Identificar campos opcionais no formulário.
+- **RF-05 — Veículos:** permitir ao ADMIN cadastrar, consultar, editar e inativar veículos; validar capacidade inteira de 1 a 60 passageiros (D-028) e situação operacional, mantendo histórico por inativação lógica.
 - **RF-06 — Viagens:** criar viagem de ida e volta com saída municipal, início do retorno e chegada prevista ao município de origem planejados.
 - **RF-07 — Alocação:** designar um motorista e um veículo por viagem.
 - **RF-08 — Participantes:** adicionar pacientes à viagem e registrar acompanhantes.

@@ -23,7 +23,7 @@
 - `id`
 - identificação/placa
 - descrição/modelo
-- `capacity` (quantidade de passageiros; não inclui motorista)
+- `capacity` (inteiro de 1 a 60 passageiros na criação/edição, conforme D-028; não inclui motorista)
 - `status` (ex.: `ACTIVE`, `IN_MAINTENANCE`, `INACTIVE`)
 
 ### Patient
@@ -32,7 +32,7 @@
 - `birthDate` obrigatório
 - `phone` obrigatório
 - `cpf` opcional
-- `susCardNumber` opcional
+- `susCardNumber` opcional: se preenchido, 15 dígitos e verificador válido conforme e-SUS APS (D-028); máscara de apresentação não é persistida.
 - endereço opcional
 - indicadores operacionais: `usesWheelchair`, `hasReducedMobility`, `needsBoardingAssistance`
 - observação operacional limitada

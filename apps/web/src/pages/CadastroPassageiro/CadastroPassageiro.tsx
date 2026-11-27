@@ -3,7 +3,8 @@ import AppLayout from '../../components/AppLayout';
 import Campo from '../../components/Campo';
 import Paginacao from '../../components/Paginacao';
 import { apiRequest, apiErrorMessage } from '../../services/api';
-import { mascaraTelefone } from '../../utils/mascaras';
+import { apenasDigitos, mascaraTelefone, mascaraCartaoSus } from '../../utils/mascaras';
+import { isValidCns } from '../../utils/cns';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 
 interface CadastroPassageiroProps {
@@ -122,7 +123,7 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
       name: p.name,
       birthDate: p.birthDate.slice(0, 10),
       phone: p.phone ?? '',
-      susCardNumber: p.susCardNumber ?? '',
+      susCardNumber: mascaraCartaoSus(p.susCardNumber ?? ''),
       cep: '',
       logradouro: '',
       bairro: '',
@@ -195,6 +196,13 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
   async function savePatient(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (saving) return;
+    const cns = apenasDigitos(form.susCardNumber);
+    if (form.susCardNumber && !isValidCns(cns)) {
+      setError('Informe um Cartão SUS válido com 15 dígitos ou deixe o campo vazio.'); return;
+    }
+    if (montarEndereco(form).length > 300) {
+      setError('O endereço completo deve ter no máximo 300 caracteres. Abrevie os campos do endereço.'); return;
+    }
     if (form.cep && form.cep.replace(/\D/g, '').length !== 8) {
       setCepError('Informe um CEP com 8 dígitos ou deixe o campo vazio.');
       return;
@@ -207,7 +215,7 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
       name: form.name.trim(),
       birthDate: form.birthDate,
       phone: form.phone.trim() || '',
-      susCardNumber: form.susCardNumber.trim() || '',
+      susCardNumber: cns,
       address: enderecoMontado || '',
       usesWheelchair: form.usesWheelchair,
       hasReducedMobility: form.hasReducedMobility,
@@ -268,20 +276,22 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
       {formOpen ? (
         <form className="cartao" onSubmit={savePatient}>
           <h2 className="cartao__titulo">{editingId ? 'Editar paciente' : 'Cadastrar paciente'}</h2>
+          <p className="texto-suave">Nome, data de nascimento e telefone são obrigatórios. Os demais campos são opcionais.</p>
           <fieldset className="secao">
             <legend>Dados pessoais</legend>
             <div className="grade">
-              <Campo id="nome" rotulo="Nome completo" value={form.name}
+              <Campo id="nome" rotulo="Nome completo" maxLength={200} value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })} required />
               <Campo id="nascimento" rotulo="Data de nascimento" type="date" value={form.birthDate}
                 onChange={(e) => setForm({ ...form, birthDate: e.target.value })} required />
-              <Campo id="telefone" rotulo="Telefone" type="tel" inputMode="tel"
+              <Campo id="telefone" rotulo="Telefone" type="tel" inputMode="tel" maxLength={20}
                 placeholder="(00) 00000-0000" value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: mascaraTelefone(e.target.value) })} required />
-              <Campo id="sus" rotulo="Cartão SUS" inputMode="numeric"
+              <div><Campo id="sus" rotulo="Cartão SUS (opcional)" inputMode="numeric" maxLength={18} pattern="[0-9]{3} [0-9]{4} [0-9]{4} [0-9]{4}" aria-describedby="sus-ajuda"
                 placeholder="000 0000 0000 0000" value={form.susCardNumber}
-                onChange={(e) => setForm({ ...form, susCardNumber: e.target.value })} />
-              <Campo id="cep" rotulo="CEP" inputMode="numeric" placeholder="00000-000"
+                onChange={(e) => setForm({ ...form, susCardNumber: mascaraCartaoSus(e.target.value) })} />
+              <p id="sus-ajuda" className="texto-suave">Se informado, use os 15 dígitos do CNS. O dígito verificador será validado.</p></div>
+              <Campo id="cep" rotulo="CEP (opcional)" inputMode="numeric" placeholder="00000-000"
                 value={form.cep} maxLength={9}
                 onChange={(e) => {
                   const v = e.target.value.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2');
@@ -295,22 +305,22 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
                 adorno={buscandoCep ? <span className="campo__adorno">⏳</span> : undefined}
               />
               {cepError && <p className="campo__erro" role="alert">{cepError}</p>}
-              <Campo id="logradouro" rotulo="Logradouro" value={form.logradouro}
+              <Campo id="logradouro" rotulo="Logradouro (opcional)" maxLength={120} value={form.logradouro}
                 onChange={(e) => setForm({ ...form, logradouro: e.target.value })} />
-              <Campo id="numero" rotulo="Número" value={form.numero}
+              <Campo id="numero" rotulo="Número (opcional)" maxLength={12} value={form.numero}
                 onChange={(e) => setForm({ ...form, numero: e.target.value })} />
-              <Campo id="complemento" rotulo="Complemento" value={form.complemento}
+              <Campo id="complemento" rotulo="Complemento (opcional)" maxLength={300} value={form.complemento}
                 onChange={(e) => setForm({ ...form, complemento: e.target.value })} />
-              <Campo id="bairro" rotulo="Bairro" value={form.bairro}
+              <Campo id="bairro" rotulo="Bairro (opcional)" maxLength={60} value={form.bairro}
                 onChange={(e) => setForm({ ...form, bairro: e.target.value })} />
-              <Campo id="cidade" rotulo="Cidade" value={form.cidade}
+              <Campo id="cidade" rotulo="Cidade (opcional)" maxLength={100} value={form.cidade}
                 onChange={(e) => setForm({ ...form, cidade: e.target.value })} />
-              <Campo id="uf" rotulo="UF" value={form.uf} maxLength={2}
+              <Campo id="uf" rotulo="UF (opcional)" value={form.uf} maxLength={2}
                 onChange={(e) => setForm({ ...form, uf: e.target.value.toUpperCase() })} />
             </div>
           </fieldset>
           <fieldset className="secao">
-            <legend>Mobilidade</legend>
+            <legend>Mobilidade (opcional)</legend>
             <div className="grade">
               <div className="campo campo--check">
                 <label className="check">
@@ -336,11 +346,11 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
             </div>
           </fieldset>
           <fieldset className="secao">
-            <legend>Observações operacionais</legend>
+            <legend>Observações operacionais (opcional)</legend>
             <div className="campo">
-              <label htmlFor="obs">Observações</label>
+              <label htmlFor="obs">Observações (opcional, até 500 caracteres)</label>
               <textarea id="obs" rows={3} placeholder="Ex.: usa oxigênio, precisa de assento na frente"
-                value={form.operationalNotes}
+                value={form.operationalNotes} maxLength={500}
                 onChange={(e) => setForm({ ...form, operationalNotes: e.target.value })} />
             </div>
           </fieldset>
@@ -357,7 +367,7 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
         <section className="cartao">
           <h2 className="cartao__titulo">Pacientes cadastrados</h2>
           <div className="filtros">
-            <input type="search" className="filtro" placeholder="Buscar por nome, telefone ou cartão SUS"
+            <input type="search" className="filtro" maxLength={200} placeholder="Buscar por nome, telefone ou cartão SUS"
               aria-label="Buscar pacientes" value={q} onChange={(e) => search(e.target.value)} />
           </div>
           {loading ? (
