@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import AuthLayout from '../../components/AuthLayout';
 import Campo from '../../components/Campo';
-import { apiRequest, apiErrorMessage, ApiRequestError, saveAccessToken } from '../../services/api';
+import { apiRequest, apiErrorMessage, ApiRequestError, saveAccessToken, clearAccessToken } from '../../services/api';
 import './Login.css';
 
 interface LoginProps {
@@ -34,6 +34,7 @@ export default function Login({ onEntrar, onEsqueciSenha }: LoginProps) {
       const me = await apiRequest<{ role: string }>('/auth/me');
       onEntrar(me.role);
     } catch (cause) {
+      clearAccessToken();
       if (cause instanceof ApiRequestError && cause.status === 401) {
         setErro('E-mail ou senha inválidos.');
       } else if (cause instanceof TypeError) {
