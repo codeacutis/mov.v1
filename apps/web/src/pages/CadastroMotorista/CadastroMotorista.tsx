@@ -1,10 +1,142 @@
-import { useState, type FormEvent } from 'react';
-import AppLayout from '../../components/AppLayout';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import Campo from '../../components/Campo';
 import Selecao from '../../components/Selecao';
 import Paginacao from '../../components/Paginacao';
 import { apiRequest, apiErrorMessage } from '../../services/api';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
+import './CadastroMotorista.css';
+
+/* ==================== COMPONENTE DE LAYOUT / MENU ==================== */
+
+interface MenuGrupo {
+  titulo: string;
+  itens: string[];
+}
+
+const MENU_GRUPOS: MenuGrupo[] = [
+  {
+    titulo: 'Operação',
+    itens: ['Painel', 'Viagens', 'Agenda da frota'],
+  },
+  {
+    titulo: 'Cadastros',
+    itens: ['Veículos', 'Motoristas', 'Passageiros'],
+  },
+  {
+    titulo: 'Gestão',
+    itens: ['Relatórios', 'App do motorista'],
+  },
+  {
+    titulo: 'Conta',
+    itens: ['Sair'],
+  },
+];
+
+interface AppLayoutProps {
+  ativo: string;
+  onNavegar: (item: string) => void;
+  onSair: () => void;
+  larguraTotal?: boolean;
+  children: ReactNode;
+}
+
+function AppLayout({
+  ativo,
+  onNavegar,
+  onSair,
+  larguraTotal = false,
+  children,
+}: AppLayoutProps) {
+  const [grupoAberto, setGrupoAberto] = useState<string | null>(null);
+
+  function toggleGrupo(titulo: string) {
+    setGrupoAberto((atual) => (atual === titulo ? null : titulo));
+  }
+
+  function handleItemClick(item: string) {
+    if (item === 'Sair') {
+      onSair();
+      return;
+    }
+    onNavegar(item);
+  }
+
+  return (
+    <div className="app">
+      <aside className="menu">
+        <div className="logo">
+          <span className="logo__icone">+</span>
+          Mov+
+        </div>
+
+        <nav aria-label="Principal">
+          {MENU_GRUPOS.map((grupo) => {
+            const estaAberto = grupoAberto === grupo.titulo;
+
+            return (
+              <div
+                key={grupo.titulo}
+                role="group"
+                aria-label={grupo.titulo}
+                className={
+                  estaAberto
+                    ? 'menu__grupo menu__grupo--aberto'
+                    : 'menu__grupo'
+                }
+              >
+                <button
+                  type="button"
+                  className="menu__titulo"
+                  aria-expanded={estaAberto}
+                  onClick={() => toggleGrupo(grupo.titulo)}
+                >
+                  <span>{grupo.titulo}</span>
+                  <span className="menu__seta" aria-hidden="true">
+                    ▾
+                  </span>
+                </button>
+
+                <div className="menu__subitens">
+                  {grupo.itens.map((item) => {
+                    const isAtivo = item !== 'Sair' && item === ativo;
+
+                    return (
+                      <button
+                        key={item}
+                        type="button"
+                        className={
+                          isAtivo
+                            ? 'menu__item menu__item--ativo'
+                            : 'menu__item'
+                        }
+                        aria-current={isAtivo ? 'page' : undefined}
+                        onClick={() => handleItemClick(item)}
+                      >
+                        {item}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </nav>
+      </aside>
+
+      <main
+        className={
+          larguraTotal
+            ? 'app__conteudo app__conteudo--total'
+            : 'app__conteudo'
+        }
+      >
+        {children}
+      </main>
+    </div>
+  );
+}
+
+/* ==================== COMPONENTE CADASTRO DE MOTORISTA ==================== */
 
 interface CadastroMotoristaProps {
   onNavegar: (item: string) => void;
@@ -54,6 +186,7 @@ export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoris
   const { data: drivers, loading, error: listError, page, totalPages, q, search, goTo, reload } =
     usePaginatedList<Driver>('/drivers');
   const [saving, setSaving] = useState(false);
+  const [searchType, setSearchType] = useState<'name' | 'email'>('name');
   const [formOpen, setFormOpen] = useState(false);
   const [form, setForm] = useState<DriverForm>(EMPTY_FORM);
   const [error, setError] = useState('');
@@ -121,7 +254,7 @@ export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoris
           <p>Cadastre e mantenha os motoristas municipais.</p>
         </div>
         {!formOpen && (
-          <button className="botao botao--primario" onClick={openForm}>
+          <button type="button" className="botao botao--primario" onClick={openForm}>
             Novo motorista
           </button>
         )}
@@ -186,9 +319,27 @@ export default function CadastroMotorista({ onNavegar, onSair }: CadastroMotoris
       ) : (
         <section className="cartao">
           <h2 className="cartao__titulo">Motoristas cadastrados</h2>
-          <div className="filtros">
-            <input type="search" className="filtro" placeholder="Buscar por nome, e-mail ou CNH"
-              aria-label="Buscar motoristas" value={q} onChange={(e) => search(e.target.value)} />
+          <div className="filtros motoristas__filtros">
+            <select
+              className="motoristas__tipo-busca"
+              aria-label="Tipo de busca"
+              value={searchType}
+              onChange={(e) => {
+                setSearchType(e.target.value as 'name' | 'email');
+                search('');
+              }}
+            >
+              <option value="name">Nome</option>
+              <option value="email">E-mail</option>
+            </select>
+            <input
+              type="search"
+              className="filtro motoristas__campo-busca"
+              placeholder={searchType === 'name' ? 'Buscar pelo nome' : 'Buscar pelo e-mail'}
+              aria-label={searchType === 'name' ? 'Buscar pelo nome' : 'Buscar pelo e-mail'}
+              value={q}
+              onChange={(e) => search(e.target.value)}
+            />
           </div>
           {loading ? (
             <p role="status">Carregando motoristas…</p>

@@ -1,10 +1,142 @@
-import { useRef, useState, type FormEvent } from 'react';
-import AppLayout from '../../components/AppLayout';
+import { useRef, useState, type FormEvent, type ReactNode } from 'react';
 import Campo from '../../components/Campo';
 import Paginacao from '../../components/Paginacao';
 import { apiRequest, apiErrorMessage } from '../../services/api';
 import { mascaraTelefone } from '../../utils/mascaras';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
+import './CadastroPassageiro.css';
+
+/* ==================== COMPONENTE DE LAYOUT / MENU ==================== */
+
+interface MenuGrupo {
+  titulo: string;
+  itens: string[];
+}
+
+const MENU_GRUPOS: MenuGrupo[] = [
+  {
+    titulo: 'Operação',
+    itens: ['Painel', 'Viagens', 'Agenda da frota'],
+  },
+  {
+    titulo: 'Cadastros',
+    itens: ['Veículos', 'Motoristas', 'Passageiros'],
+  },
+  {
+    titulo: 'Gestão',
+    itens: ['Relatórios', 'App do motorista'],
+  },
+  {
+    titulo: 'Conta',
+    itens: ['Sair'],
+  },
+];
+
+interface AppLayoutProps {
+  ativo: string;
+  onNavegar: (item: string) => void;
+  onSair: () => void;
+  larguraTotal?: boolean;
+  children: ReactNode;
+}
+
+function AppLayout({
+  ativo,
+  onNavegar,
+  onSair,
+  larguraTotal = false,
+  children,
+}: AppLayoutProps) {
+  const [grupoAberto, setGrupoAberto] = useState<string | null>(null);
+
+  function toggleGrupo(titulo: string) {
+    setGrupoAberto((atual) => (atual === titulo ? null : titulo));
+  }
+
+  function handleItemClick(item: string) {
+    if (item === 'Sair') {
+      onSair();
+      return;
+    }
+    onNavegar(item);
+  }
+
+  return (
+    <div className="app">
+      <aside className="menu">
+        <div className="logo">
+          <span className="logo__icone">+</span>
+          Mov+
+        </div>
+
+        <nav aria-label="Principal">
+          {MENU_GRUPOS.map((grupo) => {
+            const estaAberto = grupoAberto === grupo.titulo;
+
+            return (
+              <div
+                key={grupo.titulo}
+                role="group"
+                aria-label={grupo.titulo}
+                className={
+                  estaAberto
+                    ? 'menu__grupo menu__grupo--aberto'
+                    : 'menu__grupo'
+                }
+              >
+                <button
+                  type="button"
+                  className="menu__titulo"
+                  aria-expanded={estaAberto}
+                  onClick={() => toggleGrupo(grupo.titulo)}
+                >
+                  <span>{grupo.titulo}</span>
+                  <span className="menu__seta" aria-hidden="true">
+                    ▾
+                  </span>
+                </button>
+
+                <div className="menu__subitens">
+                  {grupo.itens.map((item) => {
+                    const isAtivo = item !== 'Sair' && item === ativo;
+
+                    return (
+                      <button
+                        key={item}
+                        type="button"
+                        className={
+                          isAtivo
+                            ? 'menu__item menu__item--ativo'
+                            : 'menu__item'
+                        }
+                        aria-current={isAtivo ? 'page' : undefined}
+                        onClick={() => handleItemClick(item)}
+                      >
+                        {item}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </nav>
+      </aside>
+
+      <main
+        className={
+          larguraTotal
+            ? 'app__conteudo app__conteudo--total'
+            : 'app__conteudo'
+        }
+      >
+        {children}
+      </main>
+    </div>
+  );
+}
+
+/* ==================== COMPONENTE CADASTRO DE PASSAGEIRO ==================== */
 
 interface CadastroPassageiroProps {
   onNavegar: (item: string) => void;
@@ -98,6 +230,7 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
   const [form, setForm] = useState<PatientForm>(EMPTY_FORM);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [searchType, setSearchType] = useState<'name' | 'phone'>('name');
   const [cepError, setCepError] = useState('');
   const [buscandoCep, setBuscandoCep] = useState(false);
   const cepBuscado = useRef('');
@@ -230,7 +363,7 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
           <p>Cadastre e mantenha os pacientes do transporte municipal.</p>
         </div>
         {!formOpen && (
-          <button className="botao botao--primario" onClick={openCreateForm}>
+          <button type="button" className="botao botao--primario" onClick={openCreateForm}>
             Novo paciente
           </button>
         )}
@@ -328,9 +461,27 @@ export default function CadastroPassageiro({ onNavegar, onSair }: CadastroPassag
       ) : (
         <section className="cartao">
           <h2 className="cartao__titulo">Pacientes cadastrados</h2>
-          <div className="filtros">
-            <input type="search" className="filtro" placeholder="Buscar por nome, telefone ou cartão SUS"
-              aria-label="Buscar pacientes" value={q} onChange={(e) => search(e.target.value)} />
+          <div className="filtros passageiros__filtros">
+            <select
+              className="passageiros__tipo-busca"
+              aria-label="Tipo de busca"
+              value={searchType}
+              onChange={(e) => {
+                setSearchType(e.target.value as 'name' | 'phone');
+                search('');
+              }}
+            >
+              <option value="name">Nome</option>
+              <option value="phone">Telefone</option>
+            </select>
+            <input
+              type="search"
+              className="filtro passageiros__campo-busca"
+              placeholder={searchType === 'name' ? 'Buscar pelo nome' : 'Buscar pelo telefone'}
+              aria-label={searchType === 'name' ? 'Buscar pelo nome' : 'Buscar pelo telefone'}
+              value={q}
+              onChange={(e) => search(e.target.value)}
+            />
           </div>
           {loading ? (
             <p role="status">Carregando pacientes…</p>

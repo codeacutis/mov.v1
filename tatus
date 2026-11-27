@@ -1,0 +1,17 @@
+ apps/api/package-lock.json                       |   9 [32m+[m
+ apps/api/package.backup.json                     |  88 [32m++++++[m
+ apps/api/package.json                            |   1 [32m+[m
+ apps/web/package-lock.json                       |   2 [32m+[m[31m-[m
+ apps/web/package.json                            |   2 [32m+[m[31m-[m
+ apps/web/src/App.tsx                             | 292 [32m++++++++++++++[m[31m----[m
+ apps/web/src/components/AppLayout.tsx            |  91 [32m++++[m[31m--[m
+ apps/web/src/components/AppLayout/AppLayout.css  | 154 [32m+++++++[m[31m---[m
+ apps/web/src/components/AppLayout/AppLayout.tsx  |  68 [32m++++[m[31m-[m
+ apps/web/src/hooks/usePaginatedList.ts           |  98 [32m++++[m[31m--[m
+ apps/web/src/pages/AppMotorista/AppMotorista.tsx | 366 [32m++++++++++++++++[m[31m-------[m
+ apps/web/src/pages/Painel/Painel.tsx             | 200 [32m++++++++++[m[31m---[m
+ apps/web/src/services/api.ts                     |  59 [32m+++[m[31m-[m
+ package-lock.backup.json                         |  46 [32m+++[m
+ package-lock.json                                |  46 [32m+++[m
+ package.json                                     |   5 [32m+[m
+ 16 files changed, 1221 insertions(+), 306 deletions(-)

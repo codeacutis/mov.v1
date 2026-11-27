@@ -1,11 +1,21 @@
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
+
 const TOKEN_KEY = 'mov.accessToken';
+const ROLE_KEY = 'mov.userRole';
 
 export interface PageResult<T> {
   data: T[];
   total: number;
   page: number;
   limit: number;
+}
+
+export type UserRole = 'ADMIN' | 'MOTORISTA';
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  role: UserRole;
 }
 
 export class ApiRequestError extends Error {
@@ -26,7 +36,11 @@ export function apiErrorMessage(error: unknown): string {
     if (error.status >= 500) return 'Erro interno do servidor. Tente novamente mais tarde.';
     return error.message;
   }
-  if (error instanceof TypeError) return 'Não foi possível acessar a API. Confira se o backend está em execução.';
+
+  if (error instanceof TypeError) {
+    return 'Não foi possível acessar a API. Confira se o backend está em execução.';
+  }
+
   return error instanceof Error ? error.message : 'Ocorreu um erro inesperado.';
 }
 
@@ -36,13 +50,35 @@ export function getAccessToken(): string | null {
 
 export function saveAccessToken(token: string, keepConnected: boolean): void {
   clearAccessToken();
+
   const storage = keepConnected ? localStorage : sessionStorage;
   storage.setItem(TOKEN_KEY, token);
+}
+
+export function getStoredRole(): UserRole | null {
+  const role = sessionStorage.getItem(ROLE_KEY) || localStorage.getItem(ROLE_KEY);
+
+  if (role === 'ADMIN' || role === 'MOTORISTA') {
+    return role;
+  }
+
+  return null;
+}
+
+export function saveUserRole(role: UserRole): void {
+  const storage = sessionStorage.getItem(TOKEN_KEY)
+    ? sessionStorage
+    : localStorage;
+
+  storage.setItem(ROLE_KEY, role);
 }
 
 export function clearAccessToken(): void {
   sessionStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(TOKEN_KEY);
+
+  sessionStorage.removeItem(ROLE_KEY);
+  localStorage.removeItem(ROLE_KEY);
 }
 
 export async function apiRequest<T>(
@@ -50,36 +86,51 @@ export async function apiRequest<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const headers = new Headers(options.headers);
+
   if (options.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
+
   const token = getAccessToken();
-  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers,
   });
+
   const payload: unknown = response.status === 204
     ? undefined
     : await response.json().catch(() => undefined);
 
   if (!response.ok) {
     const body = payload as { message?: string | string[] } | undefined;
+
     const message = Array.isArray(body?.message)
       ? body.message.join(' ')
       : body?.message || 'Não foi possível concluir a operação.';
+
     throw new ApiRequestError(message, response.status);
   }
+
   return payload as T;
 }
 
-export async function fetchAllPages<T>(path: string, signal?: AbortSignal): Promise<T[]> {
+export async function fetchAllPages<T>(
+  path: string,
+  signal?: AbortSignal,
+): Promise<T[]> {
   const limit = 100;
+
   const fetchPage = (page: number) =>
     apiRequest<PageResult<T>>(`${path}?page=${page}&limit=${limit}`, { signal });
+
   const first = await fetchPage(1);
   const records = [...first.data];
+
   const totalPages = Math.ceil(first.total / first.limit);
 
   for (let page = 2; page <= totalPages; page++) {
