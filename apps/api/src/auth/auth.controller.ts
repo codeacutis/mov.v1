@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { ApiEndpoint } from '../documentation/api-endpoint';
+import { ref } from '../documentation/response-schemas';
+import { ApiTags, ApiHeader } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { BootstrapGuard } from './bootstrap.guard';
 import { AuthUser } from './auth.types';
@@ -9,6 +19,7 @@ import { ForgotPasswordDto, ResetPasswordDto } from './dto/password-reset.dto';
 import { PasswordResetService } from './password-reset.service';
 import { BootstrapAdminDto } from '../users/dto/user.dto';
 
+@ApiTags('Autenticação')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -18,6 +29,20 @@ export class AuthController {
   ) {}
 
   /** Cria o primeiro ADMIN. Só funciona enquanto não existir nenhum usuário. */
+  @ApiHeader({
+    name: 'x-bootstrap-secret',
+    required: false,
+    description:
+      'Exigido em produção para a inicialização autorizada. Obtenha pelo canal seguro de implantação; não salvar no Swagger.',
+  })
+  @ApiEndpoint('Criar o primeiro ADMIN', {
+    access: 'PUBLIC',
+    schema: ref('User'),
+    status: 201,
+    description:
+      'Disponível somente enquanto não houver usuários. Não é autocadastro público.',
+    errors: [403, 409],
+  })
   @Public()
   @Post('bootstrap')
   @UseGuards(BootstrapGuard)
@@ -25,6 +50,11 @@ export class AuthController {
     return this.users.createFirstAdmin(dto);
   }
 
+  @ApiEndpoint('Autenticar e criar sessão', {
+    access: 'PUBLIC',
+    schema: ref('LoginResponse'),
+    errors: [401],
+  })
   @Public()
   @Post('login')
   @HttpCode(200)
@@ -33,6 +63,13 @@ export class AuthController {
   }
 
   /** Resposta idêntica exista ou não a conta (sem enumeração de e-mails). */
+  @ApiEndpoint('Solicitar recuperação de senha', {
+    access: 'PUBLIC',
+    schema: ref('RecoveryResponse'),
+    status: 202,
+    description:
+      'Resposta idêntica para contas existentes e inexistentes; não devolve token de recuperação.',
+  })
   @Public()
   @Post('forgot-password')
   @HttpCode(202)
@@ -44,6 +81,10 @@ export class AuthController {
     };
   }
 
+  @ApiEndpoint('Redefinir senha e revogar sessões', {
+    access: 'PUBLIC',
+    status: 204,
+  })
   @Public()
   @Post('reset-password')
   @HttpCode(204)
@@ -51,6 +92,10 @@ export class AuthController {
     await this.passwordReset.reset(dto.token, dto.password);
   }
 
+  @ApiEndpoint('Revogar a sessão atual', {
+    access: 'AUTHENTICATED',
+    status: 204,
+  })
   @Authenticated()
   @Post('logout')
   @HttpCode(204)
@@ -59,6 +104,10 @@ export class AuthController {
   }
 
   /** Rota protegida mínima: devolve a identidade da sessão atual. */
+  @ApiEndpoint('Consultar identidade da sessão', {
+    access: 'AUTHENTICATED',
+    schema: ref('SessionIdentity'),
+  })
   @Authenticated()
   @Get('me')
   me(@CurrentUser() user: AuthUser) {
