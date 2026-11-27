@@ -26,12 +26,12 @@ class AuditQuery extends PageQueryDto {
   @IsString()
   @MaxLength(100)
   declare q?: string;
-  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 100 })
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 100, description: 'Ação exata existente na trilha. Use q para busca parcial.' })
   @IsOptional()
   @IsString()
   @MaxLength(100)
   action?: string;
-  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 100 })
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 100, description: 'Tipo exato de entidade. Use q para busca parcial.' })
   @IsOptional()
   @IsString()
   @MaxLength(100)
@@ -65,11 +65,25 @@ class AuditQuery extends PageQueryDto {
 @Roles(Role.ADMIN)
 export class AuditController {
   constructor(private readonly prisma: PrismaService) {}
+  @ApiEndpoint('Listar opções existentes dos filtros de auditoria', {
+    access: 'ADMIN',
+    description: 'Ações e entidades distintas de toda a trilha, independentemente da página. Não retorna dados pessoais dos registros.',
+    schema: { type: 'object', required: ['actions', 'entityTypes'], properties: { actions: { type: 'array', items: { type: 'string' } }, entityTypes: { type: 'array', items: { type: 'string' } } } },
+  })
+  @Get('options')
+  async options() {
+    const [actions, entities] = await Promise.all([
+      this.prisma.auditLog.groupBy({ by: ['action'], orderBy: { action: 'asc' } }),
+      this.prisma.auditLog.groupBy({ by: ['entityType'], orderBy: { entityType: 'asc' } }),
+    ]);
+    return { actions: actions.map(row => row.action), entityTypes: entities.map(row => row.entityType) };
+  }
+
   @ApiEndpoint('Consultar trilha de auditoria', {
     access: 'ADMIN',
     schema: page('AuditEntry'),
     description:
-      'Filtros combinados; busca q em ação, entidade ou nome do ator. start inclusivo/end exclusivo, start < end. Ordenação occurredAt/id decrescente.',
+      'Filtros combinados; action/entityType correspondem ao valor exato, sem distinção de maiúsculas. Busca parcial q em ação, entidade ou nome do ator. start inclusivo/end exclusivo, start < end. Ordenação occurredAt/id decrescente.',
   })
   @Get()
   async list(@Query() query: AuditQuery) {
@@ -94,10 +108,10 @@ export class AuditController {
         ],
       }),
       ...(action?.trim() && {
-        action: { contains: action.trim(), mode: 'insensitive' },
+        action: { equals: action.trim(), mode: 'insensitive' },
       }),
       ...(entityType?.trim() && {
-        entityType: { contains: entityType.trim(), mode: 'insensitive' },
+        entityType: { equals: entityType.trim(), mode: 'insensitive' },
       }),
       ...(actorUserId && { actorUserId }),
       ...((start || end) && {

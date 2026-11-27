@@ -168,6 +168,12 @@ As listagens administrativas aceitam `q`, `page` e `limit`, com ordena??o defini
 
 ## Documentação automática da API
 
+Validações administrativas (D-028): veículos aceitam capacidades inteiras de **1 a 60**, com limite também protegido pela migration `20261127120000_vehicle_capacity_limit`. A migration não altera capacidades legadas; aplique-a com `npm run prisma:deploy` antes de executar a versão atualizada. Nome/modelo de veículo tem até 160 caracteres; nomes de cadastros até 200 (acompanhante: 120), endereço até 300 e observações até 500, conforme os DTOs. A busca paginada `q` tem até 200 caracteres (auditoria: 100).
+
+CNS continua opcional. Se informado, usa 15 dígitos e o algoritmo de verificação do [e-SUS APS](https://integracao.esusaps.bridge.ufsc.tech/ledi/documentacao/regras/algoritmo_CNS.html); a máscara com espaços é normalizada para dígitos. Vazio limpa o campo, sem consultar cadastro externo. Limites de tamanho não substituem renderização segura: o frontend exibe textos sem interpretá-los como HTML.
+
+`GET /audit/options` (ADMIN) fornece `{ actions, entityTypes }` com valores distintos de toda a trilha, sem depender da página atual. A interface usa seletores e tabela com 10 registros por página. Em `GET /audit`, `action` e `entityType` passam a corresponder ao valor exato, sem distinguir maiúsculas; a busca parcial anterior desses campos foi substituída pelos seletores. Para busca parcial, continue utilizando `q`.
+
 `GET /trips` aceita filtros opcionais combinados `status`, `vehicleId` e `driverId`, além de `q`, `page` e `limit`. Busca e filtros são aplicados antes da contagem e da paginação; `q` também pesquisa a descrição/nome do veículo. As respostas administrativas de viagem e agenda incluem `vehicle.description`. A interface prioriza esse nome e usa a placa como identificação complementar ou fallback para descrições vazias. O painel geral usa os totais dos cadastros, incluindo inativos/histórico; análises por período permanecem nos relatórios.
 
 O Swagger usa `@nestjs/swagger`, com identificação **Mov+**, versão **1.0**, tags por módulo e autenticação Bearer JWT. A interface fica em `/api/docs`; os contratos em `/api/docs-json` e `/api/docs-yaml`, na mesma origem da API. As rotas de negócio mantêm seus caminhos atuais, sem prefixo `/api`.

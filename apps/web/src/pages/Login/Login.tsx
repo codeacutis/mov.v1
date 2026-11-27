@@ -84,6 +84,7 @@ export default function Login({ onEntrar, onEsqueciSenha }: LoginProps) {
 
         <Campo
           id="senha"
+          maxLength={200}
           rotulo="Senha"
           type={mostrarSenha ? "text" : "password"}
           autoComplete="current-password"

@@ -397,3 +397,29 @@
     flex-wrap: wrap;
   }
 }
+#root a,
+#root .link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 12px;
+  border: 1px solid var(--ln);
+  border-radius: 7px;
+  background: var(--sf);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-decoration: none;
+  cursor: pointer;
+  vertical-align: middle;
+}
+#root a:hover,
+#root .link:hover { border-color: var(--link); background: var(--bg); text-decoration: none; }
+#root :is(a, .link):focus-visible { outline: 3px solid var(--acc); outline-offset: 3px; }
+#root .link:disabled { opacity: .5; cursor: default; }
+#root .campo__acao { border: 1px solid var(--ln); border-radius: 6px; padding: 5px 8px; background: var(--bg); color: var(--ink); text-decoration: none; }
+#root :is(td, p, h1, h2, h3, li, label) { overflow-wrap: anywhere; }

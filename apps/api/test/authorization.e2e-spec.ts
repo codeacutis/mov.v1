@@ -135,6 +135,18 @@ describe('Autorização por papel (e2e)', () => {
   });
 
   describe('Auditoria e correção de horário', () => {
+    it('lista opções de toda a trilha, sem limitar à página de registros', async () => {
+      await prisma.auditLog.createMany({ data: Array.from({ length: 12 }, (_, index) => ({ actorUserId: adminId, action: index === 0 ? 'PATIENT_CREATED' : index === 1 ? 'TRIP_STOP_CREATED' : 'TRIP_CREATED', entityType: index === 0 ? 'Patient' : index === 1 ? 'TripStop' : 'Trip', entityId: tripId, occurredAt: new Date(Date.UTC(2025, 0, index + 1)) })) });
+      const first = await request(http).get('/audit?limit=1').set(auth(adminToken)).expect(200);
+      expect(first.body.data[0].action).toBe('TRIP_CREATED');
+      const options = await request(http).get('/audit/options').set(auth(adminToken)).expect(200);
+      expect(options.body).toEqual({ actions: ['PATIENT_CREATED', 'TRIP_CREATED', 'TRIP_STOP_CREATED'], entityTypes: ['Patient', 'Trip', 'TripStop'] });
+      const filtered = await request(http).get('/audit?entityType=Trip&action=trip_created').set(auth(adminToken)).expect(200);
+      expect(filtered.body.total).toBe(10);
+      expect(filtered.body.data.every((row: { entityType: string }) => row.entityType === 'Trip')).toBe(true);
+      const search = await request(http).get('/audit?q=created').set(auth(adminToken)).expect(200);
+      expect(search.body.total).toBe(12);
+    });
     it('persiste a correção auditada e não registra uma alteração rejeitada', async () => {
       await prisma.trip.update({ where: { id: tripId }, data: { status: 'COMPLETED', actualDepartureAt: new Date('2025-01-01T09:00:00Z'), actualReturnAt: new Date('2025-01-01T15:00:00Z') } });
       await request(http).patch(`/trips/${tripId}/actual-times`).set(auth(adminToken)).send({ actualDepartureAt: '2025-01-01T08:00:00Z', reason: 'Ajuste fictício' }).expect(200);
@@ -237,6 +249,7 @@ describe('Autorização por papel (e2e)', () => {
       ['patch', `/patients/${UUID}`],
       ['patch', `/patients/${UUID}/inactivate`],
       ['get', '/audit'],
+      ['get', '/audit/options'],
       ['get', `/trips/${UUID}/observations`],
       ['patch', `/trips/${UUID}/actual-times`],
       ['get', '/trips'],

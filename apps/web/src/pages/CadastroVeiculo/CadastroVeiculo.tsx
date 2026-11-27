@@ -88,6 +88,9 @@ export default function CadastroVeiculo({ onNavegar, onSair }: CadastroVeiculoPr
 
   async function saveVehicle(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!Number.isInteger(Number(form.capacity)) || Number(form.capacity) < 1 || Number(form.capacity) > 60) {
+      setError('Informe uma capacidade inteira entre 1 e 60 passageiros.'); return;
+    }
     setSaving(true);
     setError('');
     setNotice('');
@@ -171,7 +174,7 @@ export default function CadastroVeiculo({ onNavegar, onSair }: CadastroVeiculoPr
             />
             <Campo
               id="vehicle-description"
-                rotulo="Nome ou modelo do veículo"
+              rotulo="Nome ou modelo do veículo (opcional)"
               placeholder="Van de passageiros"
               maxLength={160}
               value={form.description}
@@ -182,6 +185,7 @@ export default function CadastroVeiculo({ onNavegar, onSair }: CadastroVeiculoPr
               rotulo="Capacidade de passageiros"
               type="number"
               min={1}
+              max={60}
               step={1}
               value={form.capacity}
               onChange={(event) => setForm({ ...form, capacity: event.target.value })}
@@ -195,7 +199,7 @@ export default function CadastroVeiculo({ onNavegar, onSair }: CadastroVeiculoPr
               onChange={(event) => setForm({ ...form, status: event.target.value as VehicleStatus })}
             />
           </div>
-          <p className="texto-suave">A capacidade considera passageiros e acompanhantes; o motorista não é contado.</p>
+          <p className="texto-suave">Nome/modelo: até 160 caracteres. Capacidade: de 1 a 60 passageiros, incluindo acompanhantes; o motorista não é contado.</p>
           <div className="acoes">
             <button type="button" className="botao botao--secundario" onClick={cancelForm} disabled={saving}>
               Cancelar
@@ -209,7 +213,7 @@ export default function CadastroVeiculo({ onNavegar, onSair }: CadastroVeiculoPr
         <section className="cartao veiculos__lista" aria-labelledby="veiculos-titulo">
           <h2 id="veiculos-titulo" className="cartao__titulo">Frota cadastrada</h2>
           <div className="filtros">
-            <input type="search" className="filtro" placeholder="Buscar por placa ou descrição"
+            <input type="search" className="filtro" maxLength={200} placeholder="Buscar por placa ou descrição"
               aria-label="Buscar veículos" value={q} onChange={(e) => search(e.target.value)} />
           </div>
           {loading ? (

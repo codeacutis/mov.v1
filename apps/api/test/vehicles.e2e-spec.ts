@@ -109,6 +109,20 @@ describe('Veículos (e2e)', () => {
     ).toBe(3);
   });
 
+  it('limita capacidade a 60, preservando veículos pequenos e validando edição e descrição', async () => {
+    const created = await request(http).post('/vehicles').set(auth(adminToken)).send({ ...vehicleInput, capacity: 60 }).expect(201);
+    await expect(prisma.vehicle.create({ data: { plate: 'TST0061', capacity: 61 } })).rejects.toThrow();
+    await expect(prisma.vehicle.update({ where: { id: created.body.id }, data: { capacity: 61 } })).rejects.toThrow();
+    for (const capacity of [61, 0, -1, 1.5]) {
+      await request(http).post('/vehicles').set(auth(adminToken)).send({ ...vehicleInput, capacity }).expect(400);
+      await request(http).patch(`/vehicles/${created.body.id}`).set(auth(adminToken)).send({ capacity }).expect(400);
+    }
+    await request(http).patch(`/vehicles/${created.body.id}`).set(auth(adminToken)).send({ capacity: 1 }).expect(200);
+    await request(http).patch(`/vehicles/${created.body.id}`).set(auth(adminToken)).send({ description: 'a'.repeat(161) }).expect(400);
+    await request(http).post('/vehicles').set(auth(adminToken)).send({ ...vehicleInput, description: 'a'.repeat(161) }).expect(400);
+    expect((await prisma.vehicle.findUniqueOrThrow({ where: { id: created.body.id } })).capacity).toBe(1);
+  });
+
   it('valida capacidade, placa duplicada e exige papel ADMIN', async () => {
     await request(http)
       .post('/vehicles')

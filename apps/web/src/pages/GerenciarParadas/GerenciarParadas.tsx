@@ -59,11 +59,6 @@ const EMPTY_FORM: StopForm = {
   patientIds: [],
 };
 
-const DIRECTION_OPTIONS = [
-  { valor: 'OUTBOUND', rotulo: 'Ida' },
-  { valor: 'RETURN', rotulo: 'Retorno' },
-];
-
 const STOP_TYPE_OPTIONS = [
   { valor: 'MUNICIPAL_PICKUP', rotulo: 'Embarque municipal' },
   { valor: 'APPOINTMENT', rotulo: 'Consulta / atendimento' },
@@ -156,7 +151,7 @@ export default function GerenciarParadas({ tripId, onVoltar }: GerenciarParadasP
         method: editing ? 'PATCH' : 'POST',
         body: JSON.stringify({
           direction: form.direction,
-          sequence: Number(form.sequence),
+          sequence: editing ? Number(form.sequence) : Math.max(0, ...stops.filter(stop => stop.direction === form.direction).map(stop => stop.sequence)) + 1,
           name: form.name.trim(),
           address: form.address.trim(),
           municipality: form.municipality.trim(),
@@ -217,18 +212,13 @@ export default function GerenciarParadas({ tripId, onVoltar }: GerenciarParadasP
       </section>}
 
       {formOpen && trip?.status === 'SCHEDULED' && (
-        <form className="cartao" onSubmit={saveStop}>
+        <form className="cartao paradas__formulario" onSubmit={saveStop}>
           <h2 className="cartao__titulo">{editing ? 'Editar parada' : 'Nova parada de ida'}</h2>
-          <fieldset disabled={saving}>
+          <p className="texto-suave">{editing ? 'Atualize os dados desta parada. A ordem pode ser ajustada pelos botões Subir e Descer na lista.' : 'A parada será adicionada ao final da ida. Depois de salvar, use Subir e Descer para ajustar a ordem.'}</p>
+          <fieldset className="paradas__campos" disabled={saving}>
+          <div className="paradas__form-grid">
+          <section className="paradas__bloco" aria-labelledby="parada-local-titulo"><h3 id="parada-local-titulo">Local da parada</h3><p className="texto-suave">{form.direction === 'OUTBOUND' ? 'Ida: desembarque dos pacientes no estabelecimento.' : 'Retorno: embarque dos pacientes. Local e vínculos seguem a ida.'}</p>
           <div className="grade">
-            <Selecao id="direction" rotulo="Direção" opcoes={DIRECTION_OPTIONS}
-              disabled
-              value={form.direction}
-              onChange={(e) => setForm({ ...form, direction: e.target.value as StopDirection })} />
-            <Campo id="sequence" rotulo="Sequência" type="number" min={1} step={1}
-              disabled={form.direction === 'RETURN'}
-              value={form.sequence} required
-              onChange={(e) => setForm({ ...form, sequence: e.target.value })} />
             <Selecao id="stopType" rotulo="Tipo" opcoes={STOP_TYPE_OPTIONS}
               disabled={form.direction === 'RETURN'}
               value={form.stopType}
@@ -239,18 +229,19 @@ export default function GerenciarParadas({ tripId, onVoltar }: GerenciarParadasP
               onChange={(e) => setForm({ ...form, address: e.target.value })} />
             <Campo id="stop-municipality" rotulo="Município" value={form.municipality} required maxLength={100} disabled={form.direction === 'RETURN'}
               onChange={(e) => setForm({ ...form, municipality: e.target.value })} />
-            <Campo id="stop-arrival" rotulo="Previsão de chegada" type="datetime-local"
+            <Campo id="stop-arrival" rotulo="Previsão de chegada (opcional)" type="datetime-local"
               value={form.plannedArrivalAt}
               onChange={(e) => setForm({ ...form, plannedArrivalAt: e.target.value })} />
           </div>
           <div className="campo">
-            <label htmlFor="stop-notes">Observações</label>
+            <label htmlFor="stop-notes">Observações (opcional, até 500 caracteres)</label>
             <textarea id="stop-notes" rows={2} value={form.notes} maxLength={500}
               onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
-          {patients.length > 0 && form.direction === 'OUTBOUND' && (
-            <fieldset className="secao">
-              <legend>Associar pacientes a esta parada</legend>
+          </section>
+          <section className="paradas__bloco" aria-labelledby="parada-pacientes-titulo"><h3 id="parada-pacientes-titulo">Pacientes da parada</h3>
+          <p className="texto-suave">{form.direction === 'RETURN' ? 'As associações são sincronizadas com a parada de ida.' : form.stopType !== 'APPOINTMENT' ? 'Somente paradas de consulta recebem associações de pacientes.' : 'Selecione os pacientes que serão atendidos neste local. Os vínculos também serão usados no retorno.'}</p>
+          {patients.length > 0 && form.direction === 'OUTBOUND' ? (
               <div className="paradas__pacientes">
                 {patients.map((p) => (
                   <label key={p.id} className="check">
@@ -260,8 +251,9 @@ export default function GerenciarParadas({ tripId, onVoltar }: GerenciarParadasP
                   </label>
                 ))}
               </div>
-            </fieldset>
-          )}
+          ) : <p className="texto-suave">{form.direction === 'OUTBOUND' ? 'Adicione participantes à viagem para associá-los aqui.' : 'Para alterar pacientes, edite a parada correspondente da ida.'}</p>}
+          </section>
+          </div>
           <div className="acoes">
             <button type="button" className="botao botao--secundario" disabled={saving}
               onClick={() => { setFormOpen(false); setForm(EMPTY_FORM); setError(''); }}>
