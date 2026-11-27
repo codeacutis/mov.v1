@@ -1,11 +1,16 @@
 # Registro de decisões — Mov+
 
-Última consolidação: 26/11/2026 (decisões do Product Owner para a Release 4).
+Última consolidação: 27/11/2026 (inclui a validação de consultas da D-027, além das decisões da Release 4).
 
 Legenda:
 - **CONFIRMED:** explicitamente decidido.
 - **PROPOSED:** recomendação técnica/produto ainda não aprovada.
 - **PENDING:** depende de nova definição.
+
+## D-027 — Data e horário da consulta na participação
+**Status: CONFIRMED — Product Owner, 27/11/2026**
+
+A consulta não pode ter data e horário anteriores à saída planejada da viagem. O formulário utiliza o dia da viagem como referência e informa o limite mínimo; a API valida a criação e a edição da consulta. Reagendar a saída também deve preservar essa ordem para participações ativas. Registros históricos não são alterados automaticamente. Esta decisão complementa RF-10; não define um limite máximo ou exige que toda operação termine no mesmo dia.
 
 ## D-026 — Cancelamento administrativo de participação
 **Status: CONFIRMED — Product Owner, 26/11/2026**

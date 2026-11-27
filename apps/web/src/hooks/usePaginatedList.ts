@@ -41,6 +41,10 @@ export function usePaginatedList<T>(path: string, limit = 20, filters = '') {
   }, [page, q, load]);
 
   function search(value: string) {
+    if (value === q && page === 1) return;
+    requestId.current++;
+    setLoading(true);
+    setError('');
     setQ(value);
     setPage(1);
 

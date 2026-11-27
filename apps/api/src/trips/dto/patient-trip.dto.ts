@@ -38,7 +38,7 @@ export class CreatePatientTripDto {
   @MaxLength(100)
   appointmentMunicipality!: string;
 
-  @ApiProperty({ type: String, format: 'date-time' })
+  @ApiProperty({ type: String, format: 'date-time', description: 'Data e horário iguais ou posteriores à saída planejada da viagem.' })
   @IsISO8601()
   appointmentAt!: string;
 
@@ -80,7 +80,7 @@ export class UpdatePatientTripDto {
   @MaxLength(100)
   appointmentMunicipality?: string;
 
-  @ApiPropertyOptional({ type: String, format: 'date-time' })
+  @ApiPropertyOptional({ type: String, format: 'date-time', description: 'Data e horário iguais ou posteriores à saída planejada da viagem.' })
   @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsISO8601()
   appointmentAt?: string;

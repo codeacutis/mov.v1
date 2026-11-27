@@ -135,6 +135,41 @@ describe('Participações de pacientes (e2e)', () => {
     expect(audits.map((item) => item.action)).toContain('PATIENT_TRIP_CREATED');
   });
 
+  it('rejeita consulta anterior à saída, inclusive no mesmo dia, sem persistir alterações', async () => {
+    for (const appointmentAt of ['2099-02-09T10:00:00.000Z', '2099-02-10T05:59:00.000Z']) {
+      await request(http).post(`/trips/${tripId}/patient-trips`).set(auth())
+        .send({ ...participation(), appointmentAt }).expect(400);
+    }
+    expect(await prisma.patientTrip.count({ where: { tripId } })).toBe(0);
+    expect(await prisma.auditLog.count({ where: { action: 'PATIENT_TRIP_CREATED' } })).toBe(0);
+    const created = await request(http).post(`/trips/${tripId}/patient-trips`).set(auth()).send(participation()).expect(201);
+    await request(http).patch(`/patient-trips/${created.body.id}`).set(auth())
+      .send({ appointmentAt: '2099-02-10T05:59:00.000Z' }).expect(400);
+    const saved = await prisma.patientTrip.findUniqueOrThrow({ where: { id: created.body.id } });
+    expect(saved.appointmentAt!.toISOString()).toBe(participation().appointmentAt);
+  });
+
+  it('compara instantes com fuso horário e aceita consulta no limite da saída', async () => {
+    const created = await request(http).post(`/trips/${tripId}/patient-trips`).set(auth())
+      .send({ ...participation(), appointmentAt: '2099-02-10T03:00:00-03:00' }).expect(201);
+    expect(created.body.appointmentAt).toBe('2099-02-10T06:00:00.000Z');
+    await request(http).patch(`/patient-trips/${created.body.id}`).set(auth())
+      .send({ appointmentAt: '2099-02-10T02:59:00-03:00' }).expect(400);
+    await request(http).patch(`/patient-trips/${created.body.id}`).set(auth())
+      .send({ appointmentAt: '2099-02-10T04:00:00-03:00' }).expect(200);
+  });
+
+  it('impede reagendamento que antecipe consultas ativas e preserva as canceladas', async () => {
+    const created = await request(http).post(`/trips/${tripId}/patient-trips`).set(auth()).send(participation()).expect(201);
+    await request(http).patch(`/trips/${tripId}`).set(auth())
+      .send({ plannedDepartureAt: '2099-02-10T11:00:00.000Z' }).expect(400);
+    expect((await prisma.trip.findUniqueOrThrow({ where: { id: tripId } })).plannedDepartureAt.toISOString()).toBe('2099-02-10T06:00:00.000Z');
+    await request(http).patch(`/patient-trips/${created.body.id}/cancel`).set(auth()).send({ reason: 'Cancelamento fictício' }).expect(200);
+    await request(http).patch(`/trips/${tripId}`).set(auth())
+      .send({ plannedDepartureAt: '2099-02-10T11:00:00.000Z' }).expect(200);
+    expect((await prisma.patientTrip.findUniqueOrThrow({ where: { id: created.body.id } })).appointmentAt!.toISOString()).toBe(participation().appointmentAt);
+  });
+
   it('impede o mesmo paciente duas vezes na viagem', async () => {
     await request(http)
       .post(`/trips/${tripId}/patient-trips`)
