@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
@@ -17,16 +18,25 @@ const normalizeEmail = ({ value }: { value: unknown }) =>
  * porque o bcrypt só considera os primeiros 72 bytes.
  */
 export class BootstrapAdminDto {
+  @ApiProperty({ type: String, maxLength: 200 })
   @IsString()
   @IsNotEmpty()
   @MaxLength(200)
   name!: string;
 
+  @ApiProperty({ type: String, format: 'email', maxLength: 254 })
   @Transform(normalizeEmail)
   @IsEmail()
   @MaxLength(254)
   email!: string;
 
+  @ApiProperty({
+    type: String,
+    minLength: 10,
+    maxLength: 72,
+    writeOnly: true,
+    description: 'Senha de entrada; nunca retornada pela API.',
+  })
   @IsString()
   @MinLength(10)
   @MaxLength(72)
@@ -34,6 +44,11 @@ export class BootstrapAdminDto {
 }
 
 export class CreateUserDto extends BootstrapAdminDto {
+  @ApiProperty({
+    enum: Role,
+    description:
+      'POST /users aceita apenas ADMIN na regra de negócio; para MOTORISTA use POST /drivers.',
+  })
   @IsEnum(Role)
   role!: Role;
 }

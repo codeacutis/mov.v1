@@ -165,3 +165,21 @@ Não há mapas, GPS ou sugestão automática; a decisão mais recente D-014 subs
 `GET /drivers/inconsistencies` ? exclusivo do ADMIN e retorna identificadores de contas MOTORISTA sem Driver e v?nculos com papel ou situa??o divergentes. ? uma consulta para revis?o manual; n?o remove nem corrige registros existentes automaticamente.
 
 As listagens administrativas aceitam `q`, `page` e `limit`, com ordena??o definida no servidor. N?o h? contrato para filtros adicionais ou ordena??o escolhida pelo cliente. A interface de viagens utiliza essa busca paginada e oferece edi??o/cancelamento em `SCHEDULED` e interrup??o em `IN_PROGRESS`; o backend revalida a situa??o em cada opera??o.
+
+## Documentação automática da API
+
+O Swagger usa `@nestjs/swagger`, com identificação **Mov+**, versão **1.0**, tags por módulo e autenticação Bearer JWT. A interface fica em `/api/docs`; os contratos em `/api/docs-json` e `/api/docs-yaml`, na mesma origem da API. As rotas de negócio mantêm seus caminhos atuais, sem prefixo `/api`.
+
+`SWAGGER_ENABLED=true` habilita a publicação da documentação; `false` a desabilita, incluindo JSON, YAML e recursos da interface. Sem a variável, fica habilitada fora de `NODE_ENV=production` e desabilitada em produção. Valores diferentes de `true`/`false` impedem a inicialização. Habilitar em ambiente publicado torna a documentação pública: configure essa opção conforme a política do ambiente e, se necessário, restrinja o acesso na infraestrutura.
+
+Para testar: execute `POST /auth/login` com uma conta fictícia autorizada, copie `accessToken`, clique em **Authorize** e informe somente o token. A interface envia `Authorization: Bearer …`. A autorização não persiste após recarregar a página. Os guards continuam verificando sessão, perfil e vínculo com a viagem; disponibilizar o Swagger não concede acesso aos endpoints. `POST /auth/bootstrap` só cria o primeiro ADMIN e exige o cabeçalho de inicialização configurado em produção; nunca salve seu valor na documentação.
+
+Os DTOs documentam campos obrigatórios/opcionais, limites e enums. As respostas têm schemas distintos das entidades de persistência, sem hashes, sessões internas ou segredos. Endpoints do motorista apresentam somente os dados operacionais retornados por seus serviços. Os principais erros seguem `{ statusCode, message }`: **400** validação/regra de negócio, **401** autenticação, **403** permissão, **404** registro inacessível/inexistente e **409** conflito de agenda, capacidade, duplicidade ou estado. Erros **500** não incluem detalhes internos. Sucessos usam **200**, **201**, **202** ou **204**, conforme cada operação.
+
+As listagens paginadas retornam `{ data, total, page, limit }`, com `page=1`, `limit=20` e máximo de 100. Busca, filtros e ordenação estão descritos nas operações; não há parâmetro genérico de ordenação. Listas do motorista, participações, acompanhantes, paradas, agenda e relatórios não usam paginação. Períodos de dashboard, agenda e relatórios usam início inclusivo e fim exclusivo. A exportação XLSX tem conteúdo binário e o mesmo conjunto de filtros do relatório JSON.
+
+Esta documentação representa os contratos **implementados**, sem promover decisões pendentes ou alterar validações. Lacunas preexistentes em relação à Release 4 permanecem visíveis: telefone ainda é opcional no DTO de paciente, CPF não é aceito por esse DTO e chegada prevista ao município ainda não integra o DTO de viagem. Não enviar campos ausentes do contrato: a validação recusa propriedades desconhecidas.
+
+Manutenção: ao mudar contratos, atualize os decoradores nos controllers/DTOs e os schemas de saída em `src/documentation/response-schemas.ts`. Os testes em `src/documentation/swagger.spec.ts` verificam geração, referências, rotas publicadas/desabilitadas, paginação, JWT, respostas e preservação dos guards. A configuração segue a [documentação oficial do NestJS](https://docs.nestjs.com/openapi/introduction).
+
+A dependência Swagger 7 é compatível com NestJS 10. O override específico de `@nestjs/mapped-types` reutiliza a versão já adotada pelo projeto, compatível com `class-validator` 0.15, evitando o conflito de peer dependency da versão transitiva antiga.

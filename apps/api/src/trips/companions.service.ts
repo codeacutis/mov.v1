@@ -1,3 +1,4 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   ConflictException,
   Injectable,
@@ -7,46 +8,77 @@ import { Transform } from 'class-transformer';
 import { AuditService } from '../audit/audit.service';
 import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 import { Prisma } from '../generated/prisma/client';
-import { tripOccupancy, lockOperationalIntegrity } from '../common/operational-integrity';
+import {
+  tripOccupancy,
+  lockOperationalIntegrity,
+} from '../common/operational-integrity';
 import { PrismaService } from '../prisma/prisma.service';
 
 export class CreateCompanionDto {
-  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
+  @ApiProperty({ type: String, minLength: 2, maxLength: 120 })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @MinLength(2)
   @MaxLength(120)
   name!: string;
 
-  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
+  @ApiProperty({ type: String, minLength: 8, maxLength: 20 })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @MinLength(8)
   @MaxLength(20)
   phone!: string;
 
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 60 })
   @IsOptional()
-  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @MaxLength(60)
   relationship?: string;
 }
 
 export class UpdateCompanionDto {
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    minLength: 2,
+    maxLength: 120,
+  })
   @IsOptional()
-  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @MinLength(2)
   @MaxLength(120)
   name?: string;
 
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    minLength: 8,
+    maxLength: 20,
+  })
   @IsOptional()
-  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @MinLength(8)
   @MaxLength(20)
   phone?: string;
 
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 60 })
   @IsOptional()
-  @Transform(({ value }: { value: unknown }) => typeof value === 'string' ? value.trim() : value)
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
   @IsString()
   @MaxLength(60)
   relationship?: string;
@@ -63,7 +95,10 @@ const companionSelect = {
 
 @Injectable()
 export class CompanionsService {
-  constructor(private readonly prisma: PrismaService, private readonly audit: AuditService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async list(patientTripId: string) {
     await this.findPatientTripOrThrow(patientTripId);
@@ -74,10 +109,18 @@ export class CompanionsService {
     });
   }
 
-  async create(patientTripId: string, dto: CreateCompanionDto, actorUserId: string) {
+  async create(
+    patientTripId: string,
+    dto: CreateCompanionDto,
+    actorUserId: string,
+  ) {
     return this.prisma.$transaction(async (tx) => {
       await lockOperationalIntegrity(tx);
-      const patientTrip = await this.findPatientTripOrThrow(patientTripId, tx, true);
+      const patientTrip = await this.findPatientTripOrThrow(
+        patientTripId,
+        tx,
+        true,
+      );
       const existing = await tx.tripCompanion.count({
         where: { patientTripId, removedAt: null },
       });
@@ -96,7 +139,13 @@ export class CompanionsService {
         },
         select: companionSelect,
       });
-      await this.audit.record(tx, { actorUserId, action: 'COMPANION_CREATED', entityType: 'TripCompanion', entityId: created.id, changes: { patientTripId } });
+      await this.audit.record(tx, {
+        actorUserId,
+        action: 'COMPANION_CREATED',
+        entityType: 'TripCompanion',
+        entityId: created.id,
+        changes: { patientTripId },
+      });
       return created;
     });
   }
@@ -122,18 +171,37 @@ export class CompanionsService {
         data,
         select: companionSelect,
       });
-      await this.audit.record(tx, { actorUserId, action: 'COMPANION_UPDATED', entityType: 'TripCompanion', entityId: companionId, changes: { patientTripId, fields: Object.keys(data) } });
+      await this.audit.record(tx, {
+        actorUserId,
+        action: 'COMPANION_UPDATED',
+        entityType: 'TripCompanion',
+        entityId: companionId,
+        changes: { patientTripId, fields: Object.keys(data) },
+      });
       return updated;
     });
   }
 
-  async remove(patientTripId: string, companionId: string, actorUserId: string) {
+  async remove(
+    patientTripId: string,
+    companionId: string,
+    actorUserId: string,
+  ) {
     await this.prisma.$transaction(async (tx) => {
       await lockOperationalIntegrity(tx);
       await this.findPatientTripOrThrow(patientTripId, tx, true);
       await this.findCompanionOrThrow(patientTripId, companionId, tx);
-      await tx.tripCompanion.update({ where: { id: companionId }, data: { removedAt: new Date() } });
-      await this.audit.record(tx, { actorUserId, action: 'COMPANION_REMOVED', entityType: 'TripCompanion', entityId: companionId, changes: { patientTripId } });
+      await tx.tripCompanion.update({
+        where: { id: companionId },
+        data: { removedAt: new Date() },
+      });
+      await this.audit.record(tx, {
+        actorUserId,
+        action: 'COMPANION_REMOVED',
+        entityType: 'TripCompanion',
+        entityId: companionId,
+        changes: { patientTripId },
+      });
     });
   }
 
@@ -146,10 +214,18 @@ export class CompanionsService {
   ) {
     const pt = await client.patientTrip.findUnique({
       where: { id: patientTripId },
-      select: { id: true, tripId: true, cancelledAt: true, trip: { select: { status: true } } },
+      select: {
+        id: true,
+        tripId: true,
+        cancelledAt: true,
+        trip: { select: { status: true } },
+      },
     });
     if (!pt) throw new NotFoundException('Participação não encontrada');
-    if (editing && (pt.cancelledAt || pt.trip.status !== 'SCHEDULED')) throw new ConflictException('Acompanhantes só podem ser alterados em participações ativas antes do início');
+    if (editing && (pt.cancelledAt || pt.trip.status !== 'SCHEDULED'))
+      throw new ConflictException(
+        'Acompanhantes só podem ser alterados em participações ativas antes do início',
+      );
     return pt;
   }
 
@@ -177,9 +253,18 @@ export class CompanionsService {
     adding: number,
     client: Prisma.TransactionClient | PrismaService = this.prisma,
   ) {
-    const trip = await client.trip.findUnique({ where: { id: tripId }, select: { vehicle: { select: { capacity: true } } } });
+    const trip = await client.trip.findUnique({
+      where: { id: tripId },
+      select: { vehicle: { select: { capacity: true } } },
+    });
     if (!trip) throw new NotFoundException('Viagem não encontrada');
-    const occupied = await tripOccupancy(client as Prisma.TransactionClient, tripId);
-    if (occupied + adding > trip.vehicle.capacity) throw new ConflictException(`Capacidade do veículo (${trip.vehicle.capacity}) seria excedida. Ocupação atual: ${occupied}.`);
+    const occupied = await tripOccupancy(
+      client as Prisma.TransactionClient,
+      tripId,
+    );
+    if (occupied + adding > trip.vehicle.capacity)
+      throw new ConflictException(
+        `Capacidade do veículo (${trip.vehicle.capacity}) seria excedida. Ocupação atual: ${occupied}.`,
+      );
   }
 }
