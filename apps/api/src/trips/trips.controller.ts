@@ -17,6 +17,7 @@ import { CurrentUser, Roles } from '../auth/decorators';
 import { Role } from '../generated/prisma/client';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { InterruptTripDto, UpdateTripDto } from './dto/update-trip.dto';
+import { CorrectActualTimesDto } from './dto/correct-actual-times.dto';
 import { TripsService } from './trips.service';
 
 class CancelTripDto {
@@ -105,6 +106,16 @@ export class TripsController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ) {
     return this.trips.approveRoute(actor.id, id);
+  }
+
+  @Get(':id/observations')
+  observations(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.trips.listObservations(id);
+  }
+
+  @Patch(':id/actual-times')
+  correctActualTimes(@CurrentUser() actor: AuthUser, @Param('id', new ParseUUIDPipe()) id: string, @Body() dto: CorrectActualTimesDto) {
+    return this.trips.correctActualTimes(actor.id, id, dto);
   }
 
   @Post(':id/observations')

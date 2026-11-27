@@ -122,7 +122,7 @@ export class CompanionsService {
         data,
         select: companionSelect,
       });
-      await this.audit.record(tx, { actorUserId, action: 'COMPANION_UPDATED', entityType: 'TripCompanion', entityId: companionId, changes: { fields: Object.keys(dto) } });
+      await this.audit.record(tx, { actorUserId, action: 'COMPANION_UPDATED', entityType: 'TripCompanion', entityId: companionId, changes: { patientTripId, fields: Object.keys(data) } });
       return updated;
     });
   }

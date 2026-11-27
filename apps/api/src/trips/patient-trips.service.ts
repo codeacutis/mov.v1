@@ -134,7 +134,7 @@ export class PatientTripsService {
       if (current.cancelledAt) throw new ConflictException('Participação já cancelada');
       const updated = await tx.patientTrip.update({ where: { id }, data: { cancelledAt: new Date(), cancelledByUserId: actorUserId, cancellationReason: reason.trim() }, select: patientTripSelect });
       await invalidateRoute(tx, current.tripId);
-      await this.audit.record(tx, { actorUserId, action: 'PATIENT_TRIP_CANCELLED', entityType: 'PatientTrip', entityId: id, reason: reason.trim(), changes: { routeApprovalInvalidated: true } });
+      await this.audit.record(tx, { actorUserId, action: 'PATIENT_TRIP_CANCELLED', entityType: 'PatientTrip', entityId: id, reason: reason.trim(), changes: { tripId: current.tripId, routeApprovalInvalidated: true } });
       return updated;
     });
   }
@@ -194,6 +194,7 @@ export class PatientTripsService {
         entityId: id,
         reason: dto.priorityJustification?.trim(),
         changes: {
+          tripId: current.tripId, fields: Object.keys(dto),
           routeApprovalInvalidated: dto.appointmentLocationName !== undefined || dto.appointmentAddress !== undefined || dto.appointmentMunicipality !== undefined || dto.appointmentAt !== undefined,
           before: {
             priority: current.priority,

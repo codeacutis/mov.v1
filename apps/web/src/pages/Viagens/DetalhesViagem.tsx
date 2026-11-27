@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import HistoricoViagem from '../../components/HistoricoViagem';
 import Campo from '../../components/Campo';
 import Paginacao from '../../components/Paginacao';
 import { apiRequest, apiErrorMessage } from '../../services/api';
@@ -16,7 +17,7 @@ interface Participation {
   confirmationStatus: string; cancelledAt: string | null; cancellationReason: string | null;
   _count: { companions: number };
 }
-interface Trip { status: string; municipalPickupPoint: string; plannedDepartureAt: string; vehicle: { plate: string; capacity: number } }
+interface Trip { actualDepartureAt: string | null; actualReturnStartAt: string | null; actualReturnAt: string | null; status: string; municipalPickupPoint: string; plannedDepartureAt: string; vehicle: { plate: string; capacity: number } }
 interface Consultation { patientId: string; appointmentLocationName: string; appointmentAddress: string; appointmentMunicipality: string; appointmentAt: string; priority: Priority; priorityJustification: string }
 const empty: Consultation = { patientId: '', appointmentLocationName: '', appointmentAddress: '', appointmentMunicipality: '', appointmentAt: '', priority: 'MEDIUM', priorityJustification: '' };
 const priorities: Record<Priority, string> = { HIGH: 'Alta', MEDIUM: 'Média', LOW: 'Baixa' };
@@ -85,6 +86,7 @@ export default function DetalhesViagem({ tripId, onVoltar }: { tripId: string; o
     {error && <div className="aviso aviso--erro" role="alert">{error}</div>}
     {loadError && <div className="aviso aviso--erro" role="alert">{loadError} <button onClick={() => void load()}>Tentar novamente</button></div>}
     {loading ? <p role="status">Carregando participantes…</p> : !loadError && trip && <>
+      <HistoricoViagem tripId={tripId} times={trip} onSaved={() => load()} />
       <section className="cartao" aria-label="Ocupação"><h2>Ocupação do veículo</h2><p>Capacidade: <strong>{trip.vehicle.capacity}</strong> · Pacientes: <strong>{active.length}</strong> · Acompanhantes: <strong>{companionCount}</strong> · Vagas disponíveis: <strong>{available}</strong></p><button className="botao botao--secundario" disabled={saving} onClick={() => void load()}>Atualizar</button></section>
       {editable && !form && <button className="botao botao--primario" disabled={saving || available <= 0} onClick={() => { setEditing(null); setForm({ ...empty }); setCompanionForm(null); setCancelling(null); setError(''); }}>Adicionar paciente</button>}
       {!editable && <p>Os dados planejados só podem ser alterados em viagens agendadas.</p>}
