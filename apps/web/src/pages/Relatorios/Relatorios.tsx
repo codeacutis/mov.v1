@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Auditoria from '../../components/Auditoria';
 import AppLayout from '../../components/AppLayout';
 import IndicadoresPeriodo from '../../components/IndicadoresPeriodo';
 import { apiDownload, apiErrorMessage, apiRequest, fetchAllPages } from '../../services/api';
@@ -88,5 +89,6 @@ export default function Relatorios({ onNavegar, onSair }: { onNavegar: (item: st
       {loading && <p role="status">Consultando viagens…</p>}{exporting && <p role="status">Gerando arquivo…</p>}{error && <p role="alert" className="aviso aviso--erro">{error}</p>}
       {rows && <><p>{description}</p><p>{rows.length} viagem(ns) encontrada(s).</p>{rows.length > 0 && <div className="tabela-rolagem"><table className="tabela"><thead><tr><th>Saída / retorno planejados</th><th>Saída / retorno / chegada reais</th><th>Municípios</th><th>Veículo / motorista</th><th>Situação</th><th>Pacientes / acompanhantes</th><th>Ocupação / capacidade</th></tr></thead><tbody>{rows.map(r => <tr key={r.id}><td>{date(r.plannedDepartureAt)}<br />{date(r.plannedReturnStartAt)}</td><td>{date(r.actualDepartureAt)}<br />{date(r.actualReturnStartAt)}<br />{date(r.actualReturnAt)}</td><td>{r.municipalities.join(', ') || '—'}</td><td>{r.plate}<br />{r.driver}</td><td>{statuses[r.status] || r.status}</td><td>{r.patients} / {r.companions}</td><td>{r.occupancy === null ? '—' : `${r.occupancy}%`} / {r.capacity}</td></tr>)}</tbody></table></div>}</>}
     </section>
+    <Auditoria />
   </AppLayout>;
 }

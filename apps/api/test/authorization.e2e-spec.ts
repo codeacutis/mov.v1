@@ -134,6 +134,21 @@ describe('Autorização por papel (e2e)', () => {
     ).id;
   });
 
+  describe('Auditoria e correção de horário', () => {
+    it('persiste a correção auditada e não registra uma alteração rejeitada', async () => {
+      await prisma.trip.update({ where: { id: tripId }, data: { status: 'COMPLETED', actualDepartureAt: new Date('2025-01-01T09:00:00Z'), actualReturnAt: new Date('2025-01-01T15:00:00Z') } });
+      await request(http).patch(`/trips/${tripId}/actual-times`).set(auth(adminToken)).send({ actualDepartureAt: '2025-01-01T08:00:00Z', reason: 'Ajuste fictício' }).expect(200);
+      const entries = await prisma.auditLog.findMany({ where: { entityId: tripId, action: 'TRIP_ACTUAL_TIMES_CORRECTED' } });
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({ actorUserId: adminId, reason: 'Ajuste fictício', changes: { before: { actualDepartureAt: '2025-01-01T09:00:00.000Z' }, after: { actualDepartureAt: '2025-01-01T08:00:00.000Z' } } });
+      await request(http).patch(`/trips/${tripId}/actual-times`).set(auth(adminToken)).send({ actualDepartureAt: '2025-01-01T16:00:00Z', reason: 'Inválido' }).expect(400);
+      expect(await prisma.auditLog.count({ where: { entityId: tripId, action: 'TRIP_ACTUAL_TIMES_CORRECTED' } })).toBe(1);
+      expect((await prisma.trip.findUniqueOrThrow({ where: { id: tripId } })).actualDepartureAt?.toISOString()).toBe('2025-01-01T08:00:00.000Z');
+      const result = await request(http).get('/audit?action=TRIP_ACTUAL_TIMES_CORRECTED').set(auth(adminToken)).expect(200);
+      expect(result.body.total).toBe(1);
+    });
+  });
+
   // -------------------------------------------------------------------------
   describe('política fail-closed', () => {
     it('toda rota da API declara explicitamente sua política de acesso', () => {
@@ -200,6 +215,9 @@ describe('Autorização por papel (e2e)', () => {
       ['post', '/patients'],
       ['patch', `/patients/${UUID}`],
       ['patch', `/patients/${UUID}/inactivate`],
+      ['get', '/audit'],
+      ['get', `/trips/${UUID}/observations`],
+      ['patch', `/trips/${UUID}/actual-times`],
       ['get', '/trips'],
       ['post', '/trips'],
       ['patch', `/trips/${UUID}/cancel`],

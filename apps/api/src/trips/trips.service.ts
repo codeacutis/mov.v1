@@ -12,6 +12,7 @@ import {
 import { Prisma, TripStatus, VehicleStatus, TripObservationType } from '../generated/prisma/client';
 import { findOperationalTrip } from './driver-operation-scope';
 import { PrismaService } from '../prisma/prisma.service';
+import { CorrectActualTimesDto } from './dto/correct-actual-times.dto';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { InterruptTripDto, UpdateTripDto } from './dto/update-trip.dto';
 import { assertRouteEditable, assertRouteComplete } from './route-integrity';
@@ -76,6 +77,36 @@ export class TripsService {
     });
     if (!trip) throw new NotFoundException('Viagem não encontrada');
     return trip;
+  }
+
+  async listObservations(id: string) {
+    const trip = await this.prisma.trip.findUnique({ where: { id }, select: { id: true } });
+    if (!trip) throw new NotFoundException('Viagem não encontrada');
+    return this.prisma.tripObservation.findMany({ where: { tripId: id }, select: { id: true, type: true, description: true, patientTripId: true, createdAt: true, author: { select: { id: true, name: true } } }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }] });
+  }
+
+  async correctActualTimes(actorUserId: string, id: string, dto: CorrectActualTimesDto) {
+    const fields = ['actualDepartureAt', 'actualReturnStartAt', 'actualReturnAt'] as const;
+    const supplied = fields.filter(field => dto[field] !== undefined);
+    if (!dto.reason?.trim() || !supplied.length || supplied.some(field => typeof dto[field] !== 'string')) throw new BadRequestException('Informe ao menos um horário válido.');
+    return this.prisma.$transaction(async tx => {
+      await lockOperationalIntegrity(tx);
+      const trip = await tx.trip.findUnique({ where: { id } });
+      if (!trip) throw new NotFoundException('Viagem não encontrada');
+      if (supplied.some(field => !trip[field])) throw new ConflictException('Somente horários reais já registrados podem ser corrigidos.');
+      const next = { actualDepartureAt: trip.actualDepartureAt, actualReturnStartAt: trip.actualReturnStartAt, actualReturnAt: trip.actualReturnAt };
+      for (const field of supplied) next[field] = new Date(dto[field]!);
+      if (fields.some(field => next[field] && (isNaN(next[field]!.getTime()) || next[field]!.getTime() > Date.now()))) throw new BadRequestException('Informe horários válidos que não estejam no futuro.');
+      const ordered = fields.map(field => next[field]).filter((v): v is Date => v !== null);
+      if (ordered.some((value, index) => index > 0 && value < ordered[index - 1])) throw new BadRequestException('Os horários devem respeitar a ordem da viagem.');
+      const changed = supplied.filter(field => trip[field]!.getTime() !== next[field]!.getTime());
+      if (!changed.length) throw new BadRequestException('Informe uma alteração de horário.');
+      const before: Record<string, string> = {}, after: Record<string, string> = {};
+      for (const field of changed) { before[field] = trip[field]!.toISOString(); after[field] = next[field]!.toISOString(); }
+      const updated = await tx.trip.update({ where: { id }, data: Object.fromEntries(changed.map(field => [field, next[field]])), select: tripSelect });
+      await this.audit.record(tx, { actorUserId, action: 'TRIP_ACTUAL_TIMES_CORRECTED', entityType: 'Trip', entityId: id, reason: dto.reason.trim(), changes: { before, after } });
+      return updated;
+    });
   }
 
   async create(actorUserId: string, dto: CreateTripDto) {
@@ -233,7 +264,6 @@ export class TripsService {
         driverId: trip.driverId,
         plannedDepartureAt: trip.plannedDepartureAt,
         plannedReturnStartAt: trip.plannedReturnStartAt,
-        municipalPickupPoint: trip.municipalPickupPoint,
       };
 
       const updated = await tx.trip.update({
@@ -257,7 +287,7 @@ export class TripsService {
         action: 'TRIP_UPDATED',
         entityType: 'Trip',
         entityId: id,
-        changes: { before, after: { ...dto }, routeApprovalInvalidated: true },
+        changes: { before, after: { vehicleId: dto.vehicleId ?? trip.vehicleId, driverId: dto.driverId ?? trip.driverId, plannedDepartureAt: departure.toISOString(), plannedReturnStartAt: returnStart.toISOString() }, fields: Object.keys(dto), routeApprovalInvalidated: true },
       });
 
       return updated;

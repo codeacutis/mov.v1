@@ -21,6 +21,7 @@ Código negado: **401** sem autenticação válida, **403** com papel insuficien
 | `GET/POST /drivers`, `PATCH /drivers/:id[/inactivate]` | ✘ 401 | ✘ 403 | ✔ |
 | `GET/POST /patients`, `PATCH /patients/:id[/inactivate]` | ✘ 401 | ✘ 403 | ✔ |
 | `GET/POST /trips`, `PATCH /trips/:id/cancel` | ✘ 401 | ✘ 403 | ✔ |
+| `GET /audit`, `GET /trips/:id/observations`, `PATCH /trips/:id/actual-times` | 401 | 403 | ADMIN |
 | `GET /driver/trips`, `GET /driver/trips/:id` | ✘ 401 | ✔ (só as suas) | ✘ 403 |
 
 ## Rotas do motorista
