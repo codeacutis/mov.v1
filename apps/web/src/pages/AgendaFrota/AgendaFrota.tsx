@@ -2,6 +2,7 @@ import './AgendaFrota.css';
 import { useEffect, useState } from 'react';
 import AppLayout from '../../components/AppLayout';
 import Selecao from '../../components/Selecao';
+import { vehicleLabel } from '../../services/vehicle-label';
 import { apiRequest, apiErrorMessage } from '../../services/api';
 
 interface AgendaFrotaProps {
@@ -18,12 +19,13 @@ interface Trip {
   plannedReturnStartAt: string;
   municipalPickupPoint: string;
   status: TripStatus;
-  vehicle: { id: string; plate: string } | null;
+  vehicle: { id: string; plate: string; description?: string | null } | null;
   driver: { user: { name: string } } | null;
   _count?: { patientTrips: number };
 }
 
 interface Vehicle {
+  description?: string | null;
   id: string;
   plate: string;
   status: VehicleStatus;
@@ -121,7 +123,7 @@ export default function AgendaFrota({ onNavegar, onSair }: AgendaFrotaProps) {
 
   const vehicleOptions = [
     'Todos',
-    ...vehicles.map((v) => ({ valor: v.id, rotulo: v.plate })),
+    ...vehicles.map((v) => ({ valor: v.id, rotulo: `${vehicleLabel(v)} · ${v.plate}` })),
   ];
 
   return (
@@ -179,7 +181,7 @@ export default function AgendaFrota({ onNavegar, onSair }: AgendaFrotaProps) {
                 {veiculosFiltrados.map((v) => (
                   <tr key={v.id}>
                     <th scope="row" className="agenda__veiculo">
-                      {v.plate}
+                      {vehicleLabel(v)}<small>{v.plate}</small>
                       {v.status === 'IN_MAINTENANCE' && <small>Em manutenção atualmente</small>}
                     </th>
                     {datas.map((d, i) => {
@@ -231,7 +233,7 @@ export default function AgendaFrota({ onNavegar, onSair }: AgendaFrotaProps) {
         {tripSelecionada ? (
           <>
             <h2 className="cartao__titulo">
-              {tripSelecionada.municipalPickupPoint} · {tripSelecionada.vehicle?.plate ?? '—'}
+              {tripSelecionada.municipalPickupPoint} · {vehicleLabel(tripSelecionada.vehicle)}
             </h2>
             <dl className="detalhes">
               <div><dt>Situação</dt><dd>{ROTULOS[tripSelecionada.status]}</dd></div>

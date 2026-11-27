@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiRequest, apiErrorMessage, type PageResult } from '../services/api';
 
-export function usePaginatedList<T>(path: string, limit = 20) {
+export function usePaginatedList<T>(path: string, limit = 20, filters = '') {
   const [data, setData] = useState<T[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -16,7 +16,8 @@ export function usePaginatedList<T>(path: string, limit = 20) {
       setLoading(true);
       setError('');
       try {
-        const params = new URLSearchParams({ page: String(currentPage), limit: String(limit) });
+        const params = new URLSearchParams(filters);
+        params.set('page', String(currentPage)); params.set('limit', String(limit));
         if (currentQ.trim()) params.set('q', currentQ.trim());
         const result = await apiRequest<PageResult<T>>(`${path}?${params}`);
         if (id !== requestId.current) return;
@@ -30,7 +31,7 @@ export function usePaginatedList<T>(path: string, limit = 20) {
         if (id === requestId.current) setLoading(false);
       }
     },
-    [path, limit],
+    [path, limit, filters],
   );
 
   useEffect(() => {

@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { Transform } from 'class-transformer';
 import { IsString, MaxLength, MinLength } from 'class-validator';
-import { PageQueryDto } from '../common/page-query.dto';
+import { TripListQueryDto } from './dto/trip-list-query.dto';
 import { AuthUser } from '../auth/auth.types';
 import { CurrentUser, Roles } from '../auth/decorators';
 import { Role } from '../generated/prisma/client';
@@ -53,15 +53,15 @@ class TripObservationDto {
 export class TripsController {
   constructor(private readonly trips: TripsService) {}
 
-  @ApiEndpoint('Listar viagems', {
+  @ApiEndpoint('Listar viagens', {
     access: 'ADMIN',
     schema: page('Trip'),
     description:
-      'Ordenação saída decrescente; q busca ponto municipal, placa ou motorista. Inclui registros históricos/inativos. Paginação com page/limit. Não há parâmetro de ordenação.',
+      'Ordenação saída decrescente; q busca ponto municipal, nome/placa do veículo ou motorista. Filtros status, vehicleId e driverId são combinados antes da paginação com page/limit.',
   })
   @Get()
-  list(@Query() query: PageQueryDto) {
-    return this.trips.list(query.q, query.page, query.limit);
+  list(@Query() query: TripListQueryDto) {
+    return this.trips.list(query.q, query.page, query.limit, query);
   }
 
   @ApiEndpoint('Consultar viagem', {

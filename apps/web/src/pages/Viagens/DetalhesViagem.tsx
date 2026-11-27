@@ -17,7 +17,7 @@ interface Participation {
   confirmationStatus: string; cancelledAt: string | null; cancellationReason: string | null;
   _count: { companions: number };
 }
-interface Trip { actualDepartureAt: string | null; actualReturnStartAt: string | null; actualReturnAt: string | null; status: string; municipalPickupPoint: string; plannedDepartureAt: string; vehicle: { plate: string; capacity: number } }
+interface Trip { actualDepartureAt: string | null; actualReturnStartAt: string | null; actualReturnAt: string | null; status: string; municipalPickupPoint: string; plannedDepartureAt: string; vehicle: { plate: string; description?: string | null; capacity: number } }
 interface Consultation { patientId: string; appointmentLocationName: string; appointmentAddress: string; appointmentMunicipality: string; appointmentAt: string; priority: Priority; priorityJustification: string }
 const empty: Consultation = { patientId: '', appointmentLocationName: '', appointmentAddress: '', appointmentMunicipality: '', appointmentAt: '', priority: 'MEDIUM', priorityJustification: '' };
 const priorities: Record<Priority, string> = { HIGH: 'Alta', MEDIUM: 'Média', LOW: 'Baixa' };
@@ -81,7 +81,7 @@ export default function DetalhesViagem({ tripId, onVoltar }: { tripId: string; o
   }
 
   return <>
-    <header className="cabecalho cabecalho--linha"><div><h1>Participantes da viagem</h1>{trip && <p>{trip.municipalPickupPoint} · {dateLabel(trip.plannedDepartureAt)} · {trip.vehicle.plate}</p>}</div><button className="botao botao--secundario" disabled={saving} onClick={onVoltar}>Voltar para viagens</button></header>
+    <header className="cabecalho cabecalho--linha"><div><h1>Participantes da viagem</h1>{trip && <p>{trip.municipalPickupPoint} · {dateLabel(trip.plannedDepartureAt)} · {trip.vehicle.description?.trim() || trip.vehicle.plate}</p>}</div><button className="botao botao--secundario" disabled={saving} onClick={onVoltar}>Voltar para viagens</button></header>
     {notice && <div className="aviso aviso--ok" role="status">{notice}</div>}
     {error && <div className="aviso aviso--erro" role="alert">{error}</div>}
     {loadError && <div className="aviso aviso--erro" role="alert">{loadError} <button onClick={() => void load()}>Tentar novamente</button></div>}

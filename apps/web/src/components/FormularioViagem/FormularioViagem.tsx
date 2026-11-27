@@ -10,6 +10,7 @@ interface FormularioViagemProps {
 }
 
 interface Vehicle {
+  description?: string | null;
   id: string;
   plate: string;
   capacity: number;
@@ -123,7 +124,7 @@ export default function FormularioViagem({ onConcluir, trip }: FormularioViagemP
 
   const vehicleOptions = [
     { valor: '', rotulo: 'Selecione um veículo' },
-    ...vehicles.map((v) => ({ valor: v.id, rotulo: `${v.plate} · ${v.capacity} lugares` })),
+    ...vehicles.map((v) => ({ valor: v.id, rotulo: `${v.description?.trim() || v.plate} · ${v.plate} · ${v.capacity} lugares` })),
   ];
 
   const driverOptions = [

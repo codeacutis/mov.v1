@@ -62,11 +62,11 @@ export class AnalyticsService {
       this.prisma.trip.findMany({
         where: { plannedDepartureAt: { gte: start, lt: end } },
         select: { id: true, plannedDepartureAt: true, plannedReturnStartAt: true, municipalPickupPoint: true, status: true,
-          vehicle: { select: { id: true, plate: true } }, driver: { select: { user: { select: { name: true } } } },
+          vehicle: { select: { id: true, plate: true, description: true } }, driver: { select: { user: { select: { name: true } } } },
           _count: { select: { patientTrips: { where: { cancelledAt: null } } } },
         }, orderBy: { plannedDepartureAt: 'asc' },
       }),
-      this.prisma.vehicle.findMany({ select: { id: true, plate: true, status: true }, orderBy: { plate: 'asc' } }),
+      this.prisma.vehicle.findMany({ select: { id: true, plate: true, description: true, status: true }, orderBy: { plate: 'asc' } }),
     ]);
     return { trips, vehicles };
   }

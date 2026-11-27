@@ -73,6 +73,36 @@ describe('Viagens (e2e)', () => {
   });
 
   // ── Criação ───────────────────────────────────────────────────────────────
+  it('combina filtros antes de paginar e pesquisa o nome do veículo', async () => {
+    await prisma.vehicle.update({ where: { id: vehicleId }, data: { description: 'Van municipal fictícia' } });
+    const second = await prisma.vehicle.create({ data: { plate: 'VGM0002', capacity: 8, description: 'Ônibus fictício' } });
+    for (let day = 1; day <= 4; day++) {
+      await prisma.trip.create({ data: {
+        vehicleId: day === 4 ? second.id : vehicleId, driverId,
+        municipalPickupPoint: 'Terminal fictício',
+        plannedDepartureAt: new Date(Date.UTC(2099, 6, day, 6)),
+        plannedReturnStartAt: new Date(Date.UTC(2099, 6, day, 18)),
+        status: day === 3 ? 'COMPLETED' : 'SCHEDULED',
+      } });
+    }
+    const filters = { status: 'SCHEDULED', vehicleId, driverId, q: 'VAN MUNICIPAL', limit: 1 };
+    const first = await request(http).get('/trips').set(auth()).query({ ...filters, page: 1 }).expect(200);
+    const next = await request(http).get('/trips').set(auth()).query({ ...filters, page: 2 }).expect(200);
+    expect(first.body.total).toBe(2); expect(next.body.total).toBe(2);
+    expect(first.body.data).toHaveLength(1); expect(next.body.data).toHaveLength(1);
+    expect(first.body.data[0].id).not.toBe(next.body.data[0].id);
+    expect(first.body.data[0].vehicle.description).toBe('Van municipal fictícia');
+    expect((await request(http).get('/trips').set(auth()).expect(200)).body.total).toBe(4);
+    const agenda = await request(http).get('/analytics/agenda').set(auth())
+      .query({ start: '2099-07-01T00:00:00Z', end: '2099-07-06T00:00:00Z' }).expect(200);
+    expect(agenda.body.vehicles.find(v => v.id === vehicleId).description).toBe('Van municipal fictícia');
+    expect(agenda.body.trips[0].vehicle.description).toBe('Van municipal fictícia');
+  });
+  it('valida os filtros de situação e identificadores', async () => {
+    await request(http).get('/trips?status=INVALID').set(auth()).expect(400);
+    await request(http).get('/trips?vehicleId=INVALID').set(auth()).expect(400);
+    await request(http).get('/trips?driverId=INVALID').set(auth()).expect(400);
+  });
 
   describe('POST /trips', () => {
     it('cria uma viagem e retorna os dados com veículo e motorista', async () => {

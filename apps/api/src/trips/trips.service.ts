@@ -16,6 +16,7 @@ import { CorrectActualTimesDto } from './dto/correct-actual-times.dto';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { InterruptTripDto, UpdateTripDto } from './dto/update-trip.dto';
 import { assertRouteEditable, assertRouteComplete } from './route-integrity';
+import { TripListQueryDto } from './dto/trip-list-query.dto';
 
 const tripSelect = {
   id: true,
@@ -33,7 +34,7 @@ const tripSelect = {
   interruptionAction: true,
   routeApprovedAt: true,
   createdAt: true,
-  vehicle: { select: { id: true, plate: true, capacity: true } },
+  vehicle: { select: { id: true, plate: true, description: true, capacity: true } },
   driver: { select: { id: true, user: { select: { id: true, name: true } } } },
   _count: { select: { patientTrips: { where: { cancelledAt: null } } } },
 } satisfies Prisma.TripSelect;
@@ -45,18 +46,22 @@ export class TripsService {
     private readonly audit: AuditService,
   ) {}
 
-  async list(q?: string, page = 1, limit = 20) {
+  async list(q?: string, page = 1, limit = 20, filters: Pick<TripListQueryDto, 'status' | 'vehicleId' | 'driverId'> = {}) {
     const where: Prisma.TripWhereInput = q
       ? {
           OR: [
             { municipalPickupPoint: { contains: q, mode: 'insensitive' } },
             { vehicle: { plate: { contains: q, mode: 'insensitive' } } },
+            { vehicle: { description: { contains: q, mode: 'insensitive' } } },
             {
               driver: { user: { name: { contains: q, mode: 'insensitive' } } },
             },
           ],
         }
       : {};
+    if (filters.status) where.status = filters.status;
+    if (filters.vehicleId) where.vehicleId = filters.vehicleId;
+    if (filters.driverId) where.driverId = filters.driverId;
     const [data, total] = await Promise.all([
       this.prisma.trip.findMany({
         where,
