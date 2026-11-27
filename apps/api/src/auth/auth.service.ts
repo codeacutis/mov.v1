@@ -7,7 +7,7 @@ import { JwtPayload } from './auth.types';
 
 // Hash descartável para igualar o custo de tempo quando o e-mail não existe
 // (evita enumeração de contas por diferença de tempo de resposta).
-const DUMMY_HASH = bcrypt.hashSync('nao-e-uma-senha-real', 10);
+const DUMMY_HASH = bcrypt.hashSync('nao-e-uma-senha-real', 12);
 
 @Injectable()
 export class AuthService {

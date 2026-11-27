@@ -1,5 +1,6 @@
-import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
+import { BootstrapGuard } from './bootstrap.guard';
 import { AuthUser } from './auth.types';
 import { AuthService } from './auth.service';
 import { Authenticated, CurrentUser, Public } from './decorators';
@@ -19,6 +20,7 @@ export class AuthController {
   /** Cria o primeiro ADMIN. Só funciona enquanto não existir nenhum usuário. */
   @Public()
   @Post('bootstrap')
+  @UseGuards(BootstrapGuard)
   bootstrap(@Body() dto: BootstrapAdminDto) {
     return this.users.createFirstAdmin(dto);
   }

@@ -12,7 +12,7 @@ Código negado: **401** sem autenticação válida, **403** com papel insuficien
 | Rota | Anônimo | MOTORISTA | ADMIN |
 |---|:-:|:-:|:-:|
 | `GET /` | ✔ | ✔ | ✔ |
-| `POST /auth/bootstrap` (só enquanto não há usuários) | ✔ | ✔ | ✔ |
+| `POST /auth/bootstrap` (banco vazio; em produção exige segredo) | permitido com segredo | permitido com segredo | permitido com segredo |
 | `POST /auth/login` | ✔ | ✔ | ✔ |
 | `POST /auth/forgot-password`, `POST /auth/reset-password` (token de uso único) | ✔ | ✔ | ✔ |
 | `POST /auth/logout`, `GET /auth/me` | ✘ 401 | ✔ | ✔ |

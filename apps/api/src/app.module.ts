@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { validateWebOrigin } from './common/web-origin';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuditModule } from './audit/audit.module';
@@ -17,6 +18,7 @@ import { VehiclesModule } from './vehicles/vehicles.module';
     ConfigModule.forRoot({
       isGlobal: true,
       validate: (env: Record<string, unknown>) => {
+        validateWebOrigin(env);
         const secret = env.JWT_SECRET;
         if (typeof secret !== 'string' || secret.length < 32) {
           throw new Error(

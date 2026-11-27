@@ -77,7 +77,6 @@ Para habilitar o pipeline, envie o repositório ao GitHub com `.github/workflows
 
 ## 8.2 Deploy com Render
 
-O arquivo `render.yaml` descreve a API e o site estático. No Render, crie um Blueprint apontando para o repositório e informe `DATABASE_URL` e `WEB_ORIGIN` da API. Informe `VITE_API_URL` do frontend com a URL pública da API. O build da API aplica as migrations antes de compilar, então o banco deve estar acessível durante o deploy.
 
 Nunca coloque `DATABASE_URL`, `JWT_SECRET`, tokens do WhatsApp ou outras credenciais em commits, variáveis `VITE_*` que devam ser secretas ou logs do pipeline. `VITE_API_URL` é configuração pública do frontend.
 
@@ -99,10 +98,30 @@ O banco de teste deve ter nome terminando em `_test`; os e2e limpam as tabelas.
 
 | Método | Rota | Acesso |
 |---|---|---|
-| POST | `/auth/bootstrap` | público, só enquanto não há usuários |
+| POST | `/auth/bootstrap` | banco vazio; em produção exige segredo de inicialização |
 | POST | `/auth/login` | público |
 | POST | `/auth/logout` | autenticado (204) |
 | GET | `/auth/me` | autenticado |
 | POST | `/auth/forgot-password` | público (202, resposta sempre igual) |
 | POST | `/auth/reset-password` | público (204; corpo `{ token, password }`) |
 | POST | `/users` | ADMIN |
+
+## CI e deploy após verificações
+
+O workflow `.github/workflows/ci.yml` valida API e frontend em push e pull request. A API roda lint, tipos, testes unitários, migrations e testes integrados somente em PostgreSQL descartável do runner; `npm run build` apenas gera o cliente Prisma e compila. O frontend roda lint, testes de interface e build. Os testes integrados recusam conexões remotas, URLs com parâmetros e bancos que não terminem em `_test`.
+
+Em push na `main`, o job `deploy` depende dos dois jobs e usa o ambiente GitHub `production`. Ele confere se o commit ainda é o atual da main, aplica `prisma migrate deploy` e solicita os dois deploys Render fixando o SHA validado. Em pull requests e outras branches não há deploy. O job não espera a conclusão dos serviços no Render: acompanhe o resultado em Deploys; um hook aceito não garante que a publicação terminou. Um commit mais recente durante uma migration pode impedir o acionamento do hook anterior; migrations já aplicadas não são revertidas. Migrations devem ser compatíveis com a versão ainda em execução e revisadas antes do merge.
+
+Configuração externa necessária, sem incluir valores no Git:
+
+- No GitHub, crie o ambiente `production` e os secrets `PRODUCTION_DATABASE_URL`, `RENDER_API_DEPLOY_HOOK` e `RENDER_WEB_DEPLOY_HOOK`. A URL do banco deve permitir migrations e conexão a partir do runner. Se o ambiente tiver aprovações obrigatórias, o deploy aguardará essas aprovações.
+- No Render, vincule os dois serviços à mesma `main`, configure deploy automático como **Off** nos dois serviços e sincronize o Blueprint; isso impede execução em paralelo com os hooks. O Blueprint usa `npm ci`. No plano gratuito, a etapa de pre-deploy não está disponível, por isso o workflow aplica migrations antes dos hooks.
+- Configure na API Render `DATABASE_URL`, `JWT_SECRET`, `WEB_ORIGIN` (origem HTTPS exata, sem caminho ou barra final), `NODE_ENV=production`, e as variáveis do provedor de e-mail quando aprovadas. No frontend configure `VITE_API_URL` com a URL pública da API. Nunca coloque credenciais em variáveis `VITE_`.
+- O bootstrap em produção fica bloqueado sem `BOOTSTRAP_SECRET` com ao menos 32 caracteres. Para inicializar um banco vazio, configure temporariamente esse segredo na API e envie-o no cabeçalho `X-Bootstrap-Secret` por conexão segura; remova-o após criar o primeiro ADMIN. A transação impede segundo ADMIN via bootstrap mesmo que o segredo permaneça. Não registre o cabeçalho ou o segredo em logs.
+- Os secrets de deploy ainda precisam ser configurados externamente. Criar ou sincronizar um Blueprint, ou mudar configurações do Render, pode disparar implantação: siga o procedimento operacional aprovado.
+
+Para rodar testes integrados localmente, use servidor PostgreSQL descartável local com banco cujo nome termine em `_test`, configure `TEST_DATABASE_URL` sem parâmetros de conexão e execute `npm run test:e2e:prepare` e `npm run test:e2e` em `apps/api`. Os testes apagam todos os dados desse banco. Não aponte a variável para banco compartilhado.
+
+## Verificação da Data API Supabase
+
+A API Mov+ usa PostgreSQL pelo backend e não precisa da Data API Supabase. A inspeção `node scripts/check-supabase-security.cjs` em `apps/api` consulta apenas metadados de `public`, privilégios de `anon`/`authenticated` e RLS; não lê linhas nem altera políticas. Ela não comprova se o schema está exposto nem se a Data API está ativa. No painel, confira os schemas expostos e considere desativar a Data API se não for utilizada. Se precisar mantê-la, revise grants, RLS, policies, views e funções com o responsável antes de modificar o banco publicado. Veja https://supabase.com/docs/guides/api/securing-your-api.

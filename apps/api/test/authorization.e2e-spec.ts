@@ -149,6 +149,27 @@ describe('Autorização por papel (e2e)', () => {
     });
   });
 
+  describe('Dados completos de indicadores e relatorios', () => {
+    it('inclui mais de uma pagina nos indicadores, agenda e XLSX', async () => {
+      for (let day = 1; day <= 25; day++) {
+        const trip = await prisma.trip.create({ data: { vehicleId, driverId, municipalPickupPoint: 'Ponto ficticio', plannedDepartureAt: new Date(Date.UTC(2025, 0, day, 9)), plannedReturnStartAt: new Date(Date.UTC(2025, 0, day, 15)) } });
+        await prisma.patientTrip.create({ data: { tripId: trip.id, patientId, priority: 'MEDIUM', priorityDefinedByUserId: adminId, priorityDefinedAt: new Date(), appointmentMunicipality: 'Municipio ficticio' } });
+      }
+      const period = 'start=2025-01-01T00%3A00%3A00.000Z&end=2025-02-01T00%3A00%3A00.000Z';
+      const dashboard = await request(http).get(`/analytics/dashboard?${period}`).set(auth(adminToken)).expect(200);
+      expect(dashboard.body.total).toBe(25);
+      expect(dashboard.body.municipalities).toEqual([{ name: 'Municipio ficticio', total: 25 }]);
+      const agenda = await request(http).get(`/analytics/agenda?${period}`).set(auth(adminToken)).expect(200);
+      expect(agenda.body.trips).toHaveLength(25);
+      const report = await request(http).get(`/reports/trips?${period}&municipality=Municipio`).set(auth(adminToken)).expect(200);
+      expect(report.body).toHaveLength(25);
+      const download = await request(http).get(`/reports/trips.xlsx?${period}&municipality=Municipio`).set(auth(adminToken)).buffer(true).parse((res, done) => { const chunks: Buffer[] = []; res.on('data', chunk => chunks.push(Buffer.from(chunk))); res.on('end', () => done(null, Buffer.concat(chunks))); }).expect(200);
+      const workbook = new (await import('exceljs')).Workbook();
+      await workbook.xlsx.load(download.body as Parameters<typeof workbook.xlsx.load>[0]);
+      expect(workbook.getWorksheet('Viagens')?.rowCount).toBe(26);
+    });
+  });
+
   // -------------------------------------------------------------------------
   describe('política fail-closed', () => {
     it('toda rota da API declara explicitamente sua política de acesso', () => {

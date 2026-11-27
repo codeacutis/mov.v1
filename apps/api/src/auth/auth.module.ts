@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { UsersModule } from '../users/users.module';
+import { BootstrapGuard } from './bootstrap.guard';
 import { AuthController } from './auth.controller';
 import { BrevoPasswordResetNotifier } from './brevo-password-reset.notifier';
 import { AuthService } from './auth.service';
@@ -27,6 +28,7 @@ import { RolesGuard } from './roles.guard';
   controllers: [AuthController],
   providers: [
     AuthService,
+    BootstrapGuard,
     PasswordResetService,
     // Com BREVO_API_KEY e MAIL_FROM_EMAIL entrega por e-mail; senão, fallback de dev.
     {

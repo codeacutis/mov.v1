@@ -7,14 +7,15 @@ services:
     runtime: node
     plan: free
     rootDir: apps/api
-    # O build aplica as migrations (prisma migrate deploy) e compila.
-    # Por isso DATABASE_URL precisa existir já na fase de build.
-    buildCommand: npm install && npm run build
+    autoDeployTrigger: 'off'
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm run start:prod
     healthCheckPath: /
     envVars:
       - key: NODE_VERSION
         value: "22"
+      - key: NODE_ENV
+        value: production
       # Supabase -> Connect -> "Session pooler" (porta 5432). Nunca versionar.
       - key: DATABASE_URL
         sync: false
@@ -39,7 +40,8 @@ services:
     name: mov-web
     runtime: static
     rootDir: apps/web
-    buildCommand: npm install && npm run build
+    autoDeployTrigger: 'off'
+    buildCommand: npm ci && npm run build
     staticPublishPath: dist
     # Links do e-mail (/redefinir-senha?token=...) precisam cair no index.html.
     routes:
