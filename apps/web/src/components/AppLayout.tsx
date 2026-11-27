@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 const GRUPOS = [
   { titulo: "Operação", itens: ["Painel", "Viagens", "Agenda da frota"] },
   { titulo: "Cadastros", itens: ["Veículos", "Motoristas", "Passageiros"] },
-  { titulo: "Gestão", itens: ["Relatórios", "App do motorista"] },
+  { titulo: "Gestão", itens: ["Relatórios"] },
 ];
 
 interface AppLayoutProps {

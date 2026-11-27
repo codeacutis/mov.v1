@@ -1,40 +1,91 @@
-﻿
-/* ---------- App do motorista (moldura de celular) ---------- */
-:root { --moldura: #1b2a3c; }
-
-@media (prefers-color-scheme: dark) {
-  :root { --moldura: #2a3d57; }
-}
-
-.celular {
-  width: 100%;
-  max-width: 360px;
+.driver-portal {
+  width: min(100%, 840px);
   margin: 0 auto;
-  padding: 18px 14px;
-  border: 10px solid var(--moldura);
-  border-radius: 34px;
-  background: var(--bg);
+  padding: 20px;
+  text-align: left;
 }
-
-.celular__titulo { font-size: 22px; }
-.celular .cartao { padding: 14px; margin-bottom: 10px; }
-.celular .botao { width: 100%; }
-.celular .campo { margin-bottom: 0; }
-.celular .aviso { margin-bottom: 10px; }
-.celular .lista-passageiros li { border-bottom: 0; }
-.celular .passageiro { padding: 6px 0; align-items: center; }
-
-.cartao__subtitulo { font: 700 16px "Bricolage Grotesque", sans-serif; margin: 0 0 8px; }
-.acoes--coluna { flex-direction: column; border-top: 0; padding-top: 0; }
-.acoes--coluna .botao { width: 100%; }
-
-.status {
+.driver-portal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.driver-portal h1 {
+  font-size: clamp(24px, 5vw, 34px);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.driver-portal h2 {
+  font-size: 22px;
+  margin: 0 0 12px;
+}
+.driver-portal h3 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+.driver-portal p,
+.driver-portal li {
+  overflow-wrap: anywhere;
+}
+.driver-portal .cartao {
+  margin-bottom: 16px;
+  padding: 20px;
+}
+.driver-portal .botao,
+.driver-portal select {
+  min-height: 44px;
+}
+.driver-portal a {
+  color: var(--pri);
   display: inline-block;
-  padding: 2px 12px;
-  border-radius: 99px;
-  font-size: 12px;
+  padding: 8px 0;
+}
+.driver-portal textarea {
+  width: 100%;
+  min-height: 100px;
+}
+.driver-portal__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.driver-portal__actions .botao {
+  white-space: normal;
+}
+.driver-portal__times {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+.driver-portal__times dt {
   font-weight: 600;
 }
-
-.status--ok { background: var(--ok-bg); color: var(--ok); }
-.status--info { background: var(--info-bg); color: var(--info); }
+.driver-portal__times dd {
+  margin: 4px 0 0;
+}
+.driver-portal__access {
+  padding-left: 20px;
+}
+.driver-portal__stops {
+  padding-left: 24px;
+}
+.driver-portal__stops > li {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--ln);
+}
+@media (max-width: 600px) {
+  .driver-portal {
+    padding: 14px;
+  }
+  .driver-portal .cartao {
+    padding: 16px;
+  }
+  .driver-portal__actions {
+    flex-direction: column;
+  }
+  .driver-portal__actions .botao {
+    width: 100%;
+  }
+}

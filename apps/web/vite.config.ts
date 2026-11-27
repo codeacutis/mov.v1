@@ -13,6 +13,7 @@ export default defineConfig(({ mode }) => {
         '/vehicles': apiUrl,
         '/users': apiUrl,
         '/drivers': apiUrl,
+        '/driver': apiUrl,
         '/patients': apiUrl,
         '/trips': apiUrl,
       },

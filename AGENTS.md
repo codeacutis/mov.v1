@@ -21,7 +21,7 @@ Estas instruções orientam agentes de IA e colaboradores que trabalhem no repos
 - A saída municipal da ida e o início programado do retorno são horários fixos da viagem.
 - Na ida, o motorista segue a rota aprovada e deixa cada paciente no estabelecimento correspondente.
 - No retorno, o motorista percorre os estabelecimentos para recolher os pacientes, respeitando a programação.
-- Se o paciente não comunicou previamente que não retornará ou que estará ausente, o motorista deve aguardar sua chegada/disponibilidade. Pode utilizar os contatos registrados na participação para tentar contato com paciente ou acompanhante. Se não for para aguardar, segue a viagem normalmente conforme a orientação operacional aplicável.
+- Conforme D-018 da Release 4, se o paciente estiver ausente no recolhimento, o motorista tenta contato com paciente ou acompanhante e pode prosseguir após registrar ocorrência e justificativa. Não estabelecer timeout ou autorização adicional não aprovados. A orientação anterior de espera foi substituída pela decisão confirmada, preservada no histórico de D-018.
 - Não tratar falta de resposta a confirmação como desistência automática.
 - Não remover paciente automaticamente da viagem por ausência ou falta de confirmação.
 - Não armazenar diagnósticos ou informações clínicas desnecessárias.

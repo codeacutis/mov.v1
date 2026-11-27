@@ -23,9 +23,14 @@ Código negado: **401** sem autenticação válida, **403** com papel insuficien
 | `GET/POST /trips`, `PATCH /trips/:id/cancel` | ✘ 401 | ✘ 403 | ✔ |
 | `GET /audit`, `GET /trips/:id/observations`, `PATCH /trips/:id/actual-times` | 401 | 403 | ADMIN |
 | `GET /driver/trips`, `GET /driver/trips/:id` | ✘ 401 | ✔ (só as suas) | ✘ 403 |
+| `PATCH /driver/trips/:id/start`, `/start-return`, `/complete` | ✘ 401 | ✔ (só as suas) | ✘ 403 |
+| `PATCH /driver/trips/:id/participants/:participationId/outbound-status`, `/return-status` | ✘ 401 | ✔ (participação da mesma viagem atribuída) | ✘ 403 |
+| `POST /driver/trips/:id/observations` | ✘ 401 | ✔ (só as suas) | ✘ 403 |
 
 ## Rotas do motorista
 Mostram apenas o necessário ao transporte (RN-12, D-011): nome, telefone e indicadores de acessibilidade do paciente, acompanhantes (nome/telefone), estabelecimento e horário da consulta, estados de ida/volta e, **somente após aprovação do ADMIN**, as paradas da rota (RN-07). Nunca expõem CPF, Cartão SUS, endereço ou data de nascimento do paciente, observações, prioridade/justificativa ou confirmação.
+
+As mutações respondem `204` e não devolvem payloads administrativos. O vínculo com Driver e User ativos é verificado dentro da mesma transação da alteração e auditoria. Horários reais vêm do servidor. O frontend restaura a identidade por `/auth/me`, recusa papéis desconhecidos e remove a sessão após `401` autenticado. O menu administrativo não integra a área do motorista; a autorização definitiva permanece nos guards da API.
 
 ## Ao criar uma rota nova
 1. Declare `@Roles(...)`, `@Authenticated()` ou `@Public()`. Sem isso a rota é negada.

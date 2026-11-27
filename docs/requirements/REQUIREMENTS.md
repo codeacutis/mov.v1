@@ -65,6 +65,7 @@ Apoiar a Secretaria Municipal de Saúde na organização do transporte de pacien
 - **RN-11:** capacidade inclui pacientes e acompanhantes, exclui motorista.
 - **RN-12:** motorista não acessa CPF, Cartão SUS, endereço completo ou diagnóstico.
 - **RN-13:** horário real é definido pelo servidor.
+- O início real do retorno é registrado por ação específica em `actualReturnStartAt`, sem derivar do relógio do dispositivo. A interface oferece embarque/ausência conforme a etapa; ida e retorno permanecem independentes. A sessão restaurada consulta a identidade atual na API antes de abrir a área ADMIN ou MOTORISTA.
 - **RN-14:** alteração de horários planejados só por ADMIN e antes do início.
 - **RN-15:** correção de horário real exige ADMIN, justificativa e auditoria.
 - **RN-16:** viagem iniciada e não concluída normalmente deve ser interrompida, não cancelada.

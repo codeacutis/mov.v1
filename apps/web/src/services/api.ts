@@ -1,5 +1,42 @@
-const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3000').replace(/\/$/, '');
-const TOKEN_KEY = 'mov.accessToken';
+const API_BASE_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:3000"
+).replace(/\/$/, "");
+const TOKEN_KEY = "mov.accessToken";
+export const SESSION_EXPIRED_EVENT = "mov:session-expired";
+
+export interface SessionUser {
+  id: string;
+  name: string;
+  role: "ADMIN" | "MOTORISTA";
+}
+
+export async function getSessionUser(
+  signal?: AbortSignal,
+): Promise<SessionUser> {
+  const user = await apiRequest<SessionUser>("/auth/me", { signal });
+  if (
+    !user ||
+    typeof user.id !== "string" ||
+    typeof user.name !== "string" ||
+    !["ADMIN", "MOTORISTA"].includes(user.role)
+  ) {
+    throw new ApiRequestError("Perfil não autorizado.", 403);
+  }
+  return user;
+}
+
+function expireSession(status: number, token: string | null, path: string) {
+  // Uma resposta antiga não pode apagar uma sessão iniciada depois da requisição.
+  if (
+    status === 401 &&
+    path !== "/auth/login" &&
+    token &&
+    getAccessToken() === token
+  ) {
+    clearAccessToken();
+    window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+  }
+}
 
 export interface PageResult<T> {
   data: T[];
@@ -13,22 +50,27 @@ export class ApiRequestError extends Error {
 
   constructor(message: string, status: number) {
     super(message);
-    this.name = 'ApiRequestError';
+    this.name = "ApiRequestError";
     this.status = status;
   }
 }
 
 export function apiErrorMessage(error: unknown): string {
   if (error instanceof ApiRequestError) {
-    if (error.status === 401) return 'Sua sessão expirou. Entre novamente para continuar.';
-    if (error.status === 403) return 'Você não tem permissão para realizar esta ação.';
-    if (error.status === 404) return 'O registro ou recurso solicitado n?o foi encontrado.';
+    if (error.status === 401)
+      return "Sua sessão expirou. Entre novamente para continuar.";
+    if (error.status === 403)
+      return "Você não tem permissão para realizar esta ação.";
+    if (error.status === 404)
+      return "O registro ou recurso solicitado n?o foi encontrado.";
     if (error.status === 409) return error.message;
-    if (error.status >= 500) return 'Erro interno do servidor. Tente novamente mais tarde.';
+    if (error.status >= 500)
+      return "Erro interno do servidor. Tente novamente mais tarde.";
     return error.message;
   }
-  if (error instanceof TypeError) return 'Não foi possível acessar a API. Confira se o backend está em execução.';
-  return 'Ocorreu um erro inesperado. Tente novamente.';
+  if (error instanceof TypeError)
+    return "Não foi possível acessar a API. Confira se o backend está em execução.";
+  return "Ocorreu um erro inesperado. Tente novamente.";
 }
 
 export function getAccessToken(): string | null {
@@ -51,34 +93,41 @@ export async function apiRequest<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const headers = new Headers(options.headers);
-  if (options.body && !headers.has('Content-Type')) {
-    headers.set('Content-Type', 'application/json');
+  if (options.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
   }
   const token = getAccessToken();
-  if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (token) headers.set("Authorization", `Bearer ${token}`);
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
     headers,
   });
-  const payload: unknown = response.status === 204
-    ? undefined
-    : await response.json().catch(() => undefined);
+  const payload: unknown =
+    response.status === 204
+      ? undefined
+      : await response.json().catch(() => undefined);
 
   if (!response.ok) {
+    expireSession(response.status, token, path);
     const body = payload as { message?: string | string[] } | undefined;
     const message = Array.isArray(body?.message)
-      ? body.message.join(' ')
-      : body?.message || 'Não foi possível concluir a operação.';
+      ? body.message.join(" ")
+      : body?.message || "Não foi possível concluir a operação.";
     throw new ApiRequestError(message, response.status);
   }
   return payload as T;
 }
 
-export async function fetchAllPages<T>(path: string, signal?: AbortSignal): Promise<T[]> {
+export async function fetchAllPages<T>(
+  path: string,
+  signal?: AbortSignal,
+): Promise<T[]> {
   const limit = 100;
   const fetchPage = (page: number) =>
-    apiRequest<PageResult<T>>(`${path}?page=${page}&limit=${limit}`, { signal });
+    apiRequest<PageResult<T>>(`${path}?page=${page}&limit=${limit}`, {
+      signal,
+    });
   const first = await fetchPage(1);
   const records = [...first.data];
   const totalPages = Math.ceil(first.total / first.limit);
@@ -93,11 +142,18 @@ export async function fetchAllPages<T>(path: string, signal?: AbortSignal): Prom
 export async function apiDownload(path: string): Promise<Blob> {
   const headers = new Headers();
   const token = getAccessToken();
-  if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (token) headers.set("Authorization", `Bearer ${token}`);
   const response = await fetch(`${API_BASE_URL}${path}`, { headers });
   if (!response.ok) {
-    const body = await response.json().catch(() => undefined) as { message?: string | string[] } | undefined;
-    throw new ApiRequestError(Array.isArray(body?.message) ? body.message.join(' ') : body?.message || 'Não foi possível gerar o arquivo.', response.status);
+    expireSession(response.status, token, path);
+    const body = (await response.json().catch(() => undefined)) as
+      { message?: string | string[] } | undefined;
+    throw new ApiRequestError(
+      Array.isArray(body?.message)
+        ? body.message.join(" ")
+        : body?.message || "Não foi possível gerar o arquivo.",
+      response.status,
+    );
   }
   return response.blob();
 }
