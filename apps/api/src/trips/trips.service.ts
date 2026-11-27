@@ -208,6 +208,16 @@ export class TripsService {
         );
       }
 
+      if (dto.plannedDepartureAt && departure.getTime() !== trip.plannedDepartureAt.getTime()) {
+        const earlierAppointment = await tx.patientTrip.findFirst({
+          where: { tripId: id, cancelledAt: null, appointmentAt: { lt: departure } },
+          select: { id: true },
+        });
+        if (earlierAppointment) {
+          throw new BadRequestException('A saída planejada não pode ser posterior à consulta de um participante. Ajuste as consultas antes de reagendar a viagem.');
+        }
+      }
+
       if (dto.vehicleId && dto.vehicleId !== trip.vehicleId) {
         const vehicle = await tx.vehicle.findUnique({
           where: { id: dto.vehicleId },

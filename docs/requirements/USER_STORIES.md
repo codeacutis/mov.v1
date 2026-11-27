@@ -7,7 +7,7 @@
 - **US-03:** Como ADMIN, quero criar uma viagem com horários de saída, início do retorno e chegada prevista ao município de origem para planejar a ocupação.
 - **US-04:** Como ADMIN, quero alocar motorista e veículo sem conflitos de agenda.
 - **US-05:** Como ADMIN, quero adicionar pacientes e acompanhantes respeitando a capacidade.
-- **US-06:** Como ADMIN, quero registrar estabelecimento e horário da consulta de cada paciente.
+- **US-06:** Como ADMIN, quero registrar estabelecimento e horário da consulta de cada paciente, usando a data da viagem como referência e impedindo consulta anterior à saída planejada (D-027).
 - **US-07:** Como ADMIN, quero definir prioridade para organizar as demandas.
 - **US-08:** Como ADMIN, quero organizar manualmente e aprovar a sequência de paradas, com retorno em ordem inversa.
   - Posso editar locais, associar participantes ativos e mover paradas para cima/baixo antes do início. Vejo ida e retorno completos para revisão; alterações invalidam a aprovação anterior e o motorista só recebe a sequência novamente após aprovação.

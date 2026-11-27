@@ -74,6 +74,7 @@ export class PatientTripsService {
         throw new ConflictException(
           'Pacientes só podem ser incluídos em viagens agendadas',
         );
+      this.assertAppointmentAt(dto.appointmentAt, trip.plannedDepartureAt);
       const patient = await tx.patient.findUnique({
         where: { id: dto.patientId },
         select: { id: true, isActive: true },
@@ -156,6 +157,9 @@ export class PatientTripsService {
         throw new BadRequestException(
           'Justificativa é obrigatória ao alterar a prioridade',
         );
+      if (dto.appointmentAt !== undefined) {
+        this.assertAppointmentAt(dto.appointmentAt, current.trip.plannedDepartureAt);
+      }
       const priorityChanged =
         dto.priority !== undefined && dto.priority !== current.priority;
       const updated = await tx.patientTrip.update({
@@ -332,6 +336,7 @@ export class PatientTripsService {
       select: {
         id: true,
         status: true,
+        plannedDepartureAt: true,
         vehicle: { select: { capacity: true } },
         _count: { select: { patientTrips: true } },
         patientTrips: { select: { _count: { select: { companions: { where: { removedAt: null } } } } } },
@@ -356,7 +361,7 @@ export class PatientTripsService {
         confirmationStatus: true,
         outboundStatus: true,
         returnStatus: true,
-        trip: { select: { status: true, actualReturnStartAt: true } },
+        trip: { select: { status: true, actualReturnStartAt: true, plannedDepartureAt: true } },
       },
     });
     if (!item) throw new NotFoundException('Participação não encontrada');
@@ -367,5 +372,12 @@ export class PatientTripsService {
     if (trip.status !== TripStatus.IN_PROGRESS) throw new ConflictException('Registros operacionais exigem viagem em andamento');
     if (direction === 'OUTBOUND' && trip.actualReturnStartAt) throw new ConflictException('A etapa de ida já foi encerrada');
     if (direction === 'RETURN' && !priorNotice && !trip.actualReturnStartAt) throw new ConflictException('Registre o início do retorno antes do embarque ou ausência no retorno');
+  }
+
+  private assertAppointmentAt(value: string, departure: Date) {
+    const appointment = new Date(value);
+    if (!Number.isFinite(appointment.getTime()) || appointment < departure) {
+      throw new BadRequestException('A consulta não pode ser anterior à saída planejada da viagem');
+    }
   }
 }

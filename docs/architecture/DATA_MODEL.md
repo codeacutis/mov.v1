@@ -66,7 +66,7 @@ A viagem representa uma operação municipal de ida e volta, não uma consulta i
 - `appointmentLocationName`
 - `appointmentAddress`
 - `appointmentMunicipality`
-- `appointmentAt`
+- `appointmentAt`: na criação/edição, igual ou posterior a `Trip.plannedDepartureAt` (D-027). Reagendar a saída preserva essa ordem nas participações ativas.
 - `priority`: `HIGH | MEDIUM | LOW`
 - `priorityJustification`
 - `priorityDefinedByUserId`

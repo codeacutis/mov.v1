@@ -15,7 +15,7 @@ Apoiar a Secretaria Municipal de Saúde na organização do transporte de pacien
 - **RF-07 — Alocação:** designar um motorista e um veículo por viagem.
 - **RF-08 — Participantes:** adicionar pacientes à viagem e registrar acompanhantes.
 - **RF-09 — Capacidade:** impedir lotação acima da capacidade, contando pacientes e acompanhantes.
-- **RF-10 — Consulta:** registrar estabelecimento, endereço e horário de consulta por participação.
+- **RF-10 — Consulta:** registrar estabelecimento, endereço e horário de consulta por participação. Data e horário não podem ser anteriores à saída planejada da viagem (D-027), inclusive ao editar a consulta ou reagendar a saída de uma viagem com participantes ativos.
 - **RF-11 — Prioridade:** permitir ao ADMIN classificar prioridade HIGH/MEDIUM/LOW e justificar.
 - **RF-12 — Rota:** permitir ao ADMIN organizar manualmente e aprovar as paradas, com retorno em ordem inversa à ida.
   - Cadastrar, editar, excluir e reordenar paradas antes do início; associar somente participantes ativos da viagem aos estabelecimentos. Exibir desembarque na ida, embarque no retorno, sequência completa e estado da aprovação.
